@@ -27,10 +27,9 @@
  */
 
 import "./index.css";
-
 import { App } from "./Components/app";
-
 import { createRoot } from "react-dom/client";
 
+console.log("Rendering page!");
 const root = createRoot(document.body);
 root.render(App());

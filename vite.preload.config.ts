@@ -3,10 +3,14 @@ import { defineConfig } from "vite";
 // https://vitejs.dev/config
 export default defineConfig({
   build: {
-    outDir: "dist/preload",
     minify: false,
     rollupOptions: {
-      external: ["electron"],
+      external: [
+        "electron",
+        // Externalize optional logging dependencies (they'll be loaded dynamically if available)
+        "@wdio/logger",
+        "weald",
+      ],
       output: {
         format: "cjs",
         entryFileNames: "[name].cjs",

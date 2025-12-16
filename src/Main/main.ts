@@ -2,7 +2,7 @@ import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import started from "electron-squirrel-startup";
 import { createZustandBridge } from "@zubridge/electron/main";
-import { store } from "./Workspace";
+import { store } from "./Features/Workspace";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -15,17 +15,19 @@ const createWindow = () => {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      //TODO make True and fix
+      sandbox: false,
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    console.log("loading Dev at: ", MAIN_WINDOW_VITE_DEV_SERVER_URL);
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
-    );
+    console.log("loading index.html at: ", __dirname);
+    mainWindow.loadFile(path.join(__dirname, `../../render/index.html`));
   }
 
   // instantiate bridge
