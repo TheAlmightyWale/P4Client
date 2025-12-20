@@ -1,13 +1,21 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-
-console.log("Running Preload");
-
-import { contextBridge } from "electron";
 import { preloadBridge } from "@zubridge/electron/preload";
-import { AppState } from "../Main/Features/Workspace";
+import { contextBridge, ipcRenderer } from "electron";
+import type { AppState } from "../Main/Features";
 
+console.log("[Preload] Script initializing");
+
+// Get handlers from the preload bridge
 const { handlers } = preloadBridge<AppState>();
 
-// Expose the handlers to the renderer process
+// Expose Zubridge handlers directly without wrapping
 contextBridge.exposeInMainWorld("zubridge", handlers);
+
+// Expose simple Electron API
+contextBridge.exposeInMainWorld("electronAPI", {
+  getWindowInfo: () => {
+    console.log("[Preload] Invoking get-window-info");
+    return ipcRenderer.invoke("get-window-info");
+  },
+});
+
+console.log("[Preload] Script initialized successfully");

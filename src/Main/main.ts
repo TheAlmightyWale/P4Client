@@ -1,15 +1,20 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import started from "electron-squirrel-startup";
-import { createZustandBridge } from "@zubridge/electron/main";
-import { store } from "./Features/Workspace";
+import { createStore } from "./store";
+import { createBridge } from "./bridge";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
-const createWindow = () => {
+type ZubridgeWindow = BrowserWindow & {
+  windowId?: number;
+  windowType?: string;
+};
+
+const createMainWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -19,7 +24,7 @@ const createWindow = () => {
       sandbox: false,
       preload: path.join(__dirname, "preload.cjs"),
     },
-  });
+  }) as ZubridgeWindow;
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -30,38 +35,57 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, `../../render/index.html`));
   }
 
-  // instantiate bridge
-  const bridge = createZustandBridge(store);
-
-  // subscribe the window to state updates
-  //TODO unsubscribe on quitting?
-  bridge.subscribe([mainWindow]);
-
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  return [mainWindow];
+};
+
+const createAndSubscribeWindows = (bridge: ReturnType<typeof createBridge>) => {
+  const [mainWindow] = createMainWindow();
+  bridge.subscribe([mainWindow]);
+  return [mainWindow];
+};
+
+const SetupEventHandlers = (bridge: ReturnType<typeof createBridge>) => {
+  // Quit when all windows are closed, except on macOS. There, it's common
+  // for applications and their menu bar to stay active until the user quits
+  // explicitly with Cmd + Q.
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  });
+
+  app.on("activate", () => {
+    // On OS X it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createAndSubscribeWindows(bridge);
+    }
+  });
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on("ready", createWindow);
+app.whenReady().then(() => {
+  const store = createStore();
+  const bridge = createBridge(store);
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  // Handle window info requests
+  ipcMain.handle("get-window-info", (event) => {
+    const sender = event.sender;
+    const window = BrowserWindow.fromWebContents(sender) as ZubridgeWindow;
+
+    return {
+      type: window?.windowType || "main",
+      id: window?.windowId || 1,
+    };
+  });
+
+  // Create all windows
+  createAndSubscribeWindows(bridge);
+
+  SetupEventHandlers(bridge);
 });
-
-app.on("activate", () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

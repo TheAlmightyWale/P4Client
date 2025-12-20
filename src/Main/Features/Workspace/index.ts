@@ -1,40 +1,25 @@
-export type AppState = { counter: number };
-// `src/main/store.ts`
-import { createStore } from "zustand/vanilla";
+import type { StoreApi } from "zustand";
+import type { AppState } from "../index";
 
 /**
- * Types for the basic mode state
- * In basic mode, action handlers are properties of the state object
+ * Creates action handlers for counter operations in basic mode
+ * In basic mode, these handlers are attached directly to the store state
  */
-export interface State {
-  counter: number;
-  theme: "light" | "dark";
-
-  // Action handlers for basic mode
-  "COUNTER:INCREMENT": () => void;
-  "COUNTER:DECREMENT": () => void;
-  "THEME:TOGGLE": () => void;
-
-  // Index signature to satisfy AnyState requirement
-  [key: string]: unknown;
-}
-
-/**
- * Initial state for basic mode
- */
-export const initialState: State = {
-  counter: 0,
-  theme: "dark",
-  "COUNTER:INCREMENT": () => {
-    console.log("Increment Called");
-  },
-  "COUNTER:DECREMENT": () => {
-    console.log("Decrement Called");
-  },
-  "THEME:TOGGLE": () => {
-    console.log("Them toggled");
-  },
+export const createCounterHandlers = (store: StoreApi<AppState>) => {
+  return {
+    "COUNTER:INCREMENT": () => {
+      console.log("[Basic] Incrementing counter");
+      store.setState((state) => ({
+        ...state,
+        counter: state.counter + 1,
+      }));
+    },
+    "COUNTER:DECREMENT": () => {
+      console.log("[Basic] Decrementing counter");
+      store.setState((state) => ({
+        ...state,
+        counter: state.counter - 1,
+      }));
+    },
+  };
 };
-
-// create app store
-export const store = createStore<AppState>()(() => initialState);
