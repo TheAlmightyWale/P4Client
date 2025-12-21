@@ -1,17 +1,17 @@
-export type AppState = { counter: number };
-// `src/main/store.ts`
 import { createStore } from "zustand/vanilla";
 
 /**
  * Types for the basic mode state
  * In basic mode, action handlers are properties of the state object
  */
-export interface State {
+export interface AppState {
+  //Counter feature
   counter: number;
-
-  // Action handlers for basic mode
   "COUNTER:INCREMENT": () => void;
   "COUNTER:DECREMENT": () => void;
+
+  //Theme feature
+  theme: "light" | "dark";
   "THEME:TOGGLE": () => void;
 
   // Index signature to satisfy AnyState requirement
@@ -21,7 +21,8 @@ export interface State {
 /**
  * Initial state for basic mode
  */
-export const initialState: State = {
+export const initialState: AppState = {
+  //Counter theatre
   counter: 0,
   "COUNTER:INCREMENT": () => {
     console.log("Increment Called");
@@ -29,8 +30,11 @@ export const initialState: State = {
   "COUNTER:DECREMENT": () => {
     console.log("Decrement Called");
   },
+
+  //Theme theatre
+  theme: "dark",
   "THEME:TOGGLE": () => {
-    console.log("Them toggled");
+    console.log("Theme toggled");
   },
 };
 

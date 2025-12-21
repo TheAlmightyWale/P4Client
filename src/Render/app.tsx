@@ -5,6 +5,7 @@ import './index.css';
 
 // UI components
 import { Button } from './Components/button';
+import {ThemeToggle} from './Components/themeToggle';
 
 // Create the store hook
 const useStore = createUseStore();
@@ -15,6 +16,7 @@ function App() {
 
   // Get state values
   const counter = (store?.counter || 0) as number;
+  const theme = (store?.theme || 'dark') as 'dark' | 'light';
 
   // Action handlers
   const handleIncrement = async () => {
@@ -23,6 +25,10 @@ function App() {
 
   const handleDecrement = async () => {
     await dispatch('COUNTER:DECREMENT');
+  };
+
+  const handleThemeToggle = async () => {
+    await dispatch('THEME:TOGGLE');
   };
 
   return (
@@ -44,6 +50,7 @@ function App() {
             </Button>
           </div>
         </div>
+        <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
       </div>
     </div>
   );
