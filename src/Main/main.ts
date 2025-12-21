@@ -27,16 +27,16 @@ const createMainWindow = () => {
   }) as ZubridgeWindow;
 
   // and load the index.html of the app.
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    console.log("loading Dev at: ", MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
+    const url = "http://localhost:5173";
+    console.log("loading Dev at: ", url);
+    mainWindow.loadURL(url);
+    mainWindow.webContents.openDevTools();
   } else {
     console.log("loading index.html at: ", __dirname);
     mainWindow.loadFile(path.join(__dirname, `../../render/index.html`));
   }
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 
   return [mainWindow];
 };
