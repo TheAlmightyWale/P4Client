@@ -1,47 +1,35 @@
-import clsx from 'clsx';
-import type React from 'react';
-import Button from './button';
+import clsx from "clsx";
+import type React from "react";
+import Button from "./button";
 
-/**
- * Props for the ThemeToggle component
- */
 interface ThemeToggleProps {
-  /**
-   * The current theme
-   */
-  theme: 'light' | 'dark';
-  /**
-   * Callback to toggle the theme
-   */
+  theme: "light" | "dark";
   onToggle: () => void;
-  /**
-   * Optional className to allow further styling
-   */
   className?: string;
 }
 
 /**
  * Theme toggle button component that switches between light and dark themes
  */
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onToggle, className = '' }) => {
-  const containerClass = clsx('max-w-[theme(--container-width)] mx-auto my-5', className);
-  const icon = theme === 'light' ? '🌙' : '☀️';
-
-  // Dynamic styles based on theme
-  const buttonStyles = clsx(
-    'w-full',
-    theme === 'light' ? 'bg-light-bg text-dark-bg' : 'bg-dark-bg text-light-bg',
-  );
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({
+  theme,
+  onToggle,
+  className = "",
+}) => {
+  const icon = theme === "light" ? "🌙" : "☀️";
+  const label =
+    theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode";
 
   return (
-    <div className={containerClass}>
+    <div className={clsx("w-full", className)}>
       <Button
-        className={buttonStyles}
-        variant="primary"
+        variant="secondary"
         onClick={onToggle}
-        aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        className="w-full"
+        aria-label={label}
       >
-        {icon} Switch Theme
+        <span className="mr-2">{icon}</span>
+        {label}
       </Button>
     </div>
   );

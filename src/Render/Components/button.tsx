@@ -1,80 +1,99 @@
-import type React from 'react';
-import type { ButtonHTMLAttributes } from 'react';
+import clsx from "clsx";
+import type React from "react";
+import type { ButtonHTMLAttributes } from "react";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'create' | 'reset' | 'close' | 'link' | 'outline';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "primary" | "secondary" | "success" | "danger" | "ghost";
+  size?: "sm" | "md" | "lg";
   loading?: boolean;
 }
 
 /**
- * Button component for test app using proper Zubridge styling
+ * Button component using Tailwind CSS with theme support
  */
 export const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   loading = false,
-  className = '',
+  className = "",
   disabled = false,
   children,
   ...props
 }) => {
-  // Generate Tailwind classes based on variant
-  const getVariantClasses = () => {
-    switch (variant) {
-      case 'create':
-        return 'bg-[var(--color-create)] hover:bg-[var(--color-create-hover)] active:bg-[var(--color-create-active)]';
-      case 'reset':
-        return 'bg-[var(--color-reset)] hover:bg-[var(--color-reset-hover)] active:bg-[var(--color-reset-active)]';
-      case 'close':
-        return 'bg-[var(--color-close)] hover:bg-[var(--color-close-hover)] active:bg-[var(--color-close-active)]';
-      case 'secondary':
-        return 'bg-purple-400 hover:bg-purple-500 active:bg-purple-600';
-      case 'link':
-        return 'bg-transparent text-primary hover:text-primary-dark underline hover:no-underline';
-      case 'outline':
-        return 'bg-transparent border border-primary text-primary hover:bg-primary/10';
-      default:
-        return 'bg-primary hover:bg-primary-dark active:bg-primary-darker';
-    }
+  const baseStyles = clsx(
+    "inline-flex items-center justify-center font-medium rounded-lg",
+    "transition-all duration-200",
+    "focus:outline-none focus:ring-2 focus:ring-offset-2",
+    "disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+  );
+
+  const variantStyles = {
+    primary: clsx(
+      "bg-[var(--color-accent)] text-white",
+      "hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-active)]",
+      "focus:ring-[var(--color-accent)]"
+    ),
+    secondary: clsx(
+      "bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]",
+      "border border-[var(--color-border)]",
+      "hover:bg-[var(--color-bg-secondary)]",
+      "focus:ring-[var(--color-accent)]"
+    ),
+    success: clsx(
+      "bg-[var(--color-success)] text-white",
+      "hover:opacity-90 active:opacity-80",
+      "focus:ring-[var(--color-success)]"
+    ),
+    danger: clsx(
+      "bg-[var(--color-error)] text-white",
+      "hover:opacity-90 active:opacity-80",
+      "focus:ring-[var(--color-error)]"
+    ),
+    ghost: clsx(
+      "bg-transparent text-[var(--color-text-primary)]",
+      "hover:bg-[var(--color-bg-tertiary)]",
+      "focus:ring-[var(--color-accent)]"
+    ),
   };
 
-  // Generate Tailwind classes based on size
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'py-1 px-3 text-xs';
-      case 'lg':
-        return 'py-3 px-6 text-base';
-      default:
-        return 'py-2 px-4 text-sm';
-    }
+  const sizeStyles = {
+    sm: "px-3 py-1.5 text-sm min-w-[80px]",
+    md: "px-4 py-2 text-base min-w-[100px]",
+    lg: "px-6 py-3 text-lg min-w-[120px]",
   };
 
-  const buttonClasses = [
-    // Base styles
-    'cursor-pointer font-medium rounded-lg transition-all duration-200 min-w-[theme(--button-width)] whitespace-nowrap w-full',
-    // Text color (white for most variants)
-    variant !== 'link' && variant !== 'outline' ? 'text-white' : '',
-    // Variant specific styles
-    getVariantClasses(),
-    // Size specific styles
-    getSizeClasses(),
-    // Interactive states
-    'hover:-translate-y-[1px] hover:shadow-sm',
-    'active:translate-y-[1px] active:shadow-none',
-    // Disabled state
-    (disabled || loading) &&
-      'bg-gray-400 cursor-not-allowed transform-none hover:bg-gray-400 hover:shadow-none',
-    // Custom classes
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const buttonClasses = clsx(
+    baseStyles,
+    variantStyles[variant],
+    sizeStyles[size],
+    !disabled && !loading && "hover:-translate-y-0.5 active:translate-y-0",
+    className
+  );
 
   return (
     <button className={buttonClasses} disabled={disabled || loading} {...props}>
-      {loading ? <span className="inline-block">Loading...</span> : children}
+      {loading ? (
+        <span className="inline-flex items-center gap-2">
+          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          Loading...
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 };

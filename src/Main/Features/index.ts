@@ -22,7 +22,7 @@ export interface AppState {
  * Initial state for basic mode
  */
 export const initialState: AppState = {
-  //Counter theatre
+  //Counter feature
   counter: 0,
   "COUNTER:INCREMENT": () => {
     console.log("Increment Called");
@@ -31,11 +31,13 @@ export const initialState: AppState = {
     console.log("Decrement Called");
   },
 
-  //Theme theatre
+  //Theme feature
   theme: "dark",
   "THEME:TOGGLE": () => {
     console.log("Theme toggled");
   },
+
+  //History feature
 };
 
 // create app store

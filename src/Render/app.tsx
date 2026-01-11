@@ -1,11 +1,12 @@
-import { createUseStore, useDispatch } from '@zubridge/electron';
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import './index.css';
+import { createUseStore, useDispatch } from "@zubridge/electron";
+import React from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
 
 // UI components
-import { Button } from './Components/button';
-import {ThemeToggle} from './Components/themeToggle';
+import { Button } from "./Components/button";
+import { ThemeToggle } from "./Components/themeToggle";
+import { ThemeProvider } from "./Components/ThemeProvider";
 
 // Create the store hook
 const useStore = createUseStore();
@@ -16,32 +17,34 @@ function App() {
 
   // Get state values
   const counter = (store?.counter || 0) as number;
-  const theme = (store?.theme || 'dark') as 'dark' | 'light';
+  const theme = (store?.theme || "dark") as "dark" | "light";
 
   // Action handlers
   const handleIncrement = async () => {
-    await dispatch('COUNTER:INCREMENT');
+    await dispatch("COUNTER:INCREMENT");
   };
 
   const handleDecrement = async () => {
-    await dispatch('COUNTER:DECREMENT');
+    await dispatch("COUNTER:DECREMENT");
   };
 
   const handleThemeToggle = async () => {
-    await dispatch('THEME:TOGGLE');
+    await dispatch("THEME:TOGGLE");
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-[theme(--container-width)] mx-auto my-5 mt-[60px]">
-        {/* Counter Display */}
-        <div className="mb-8 text-center">
-          <h2 className="mb-4 text-2xl font-bold">Counter: {counter}</h2>
-        </div>
+    <ThemeProvider theme={theme}>
+      <div className="min-h-screen bg-[var(--color-bg-primary)] transition-colors duration-200">
+        <div className="max-w-[var(--container-width)] mx-auto py-16 px-4">
+          {/* Counter Display */}
+          <div className="card mb-8">
+            <h2 className="text-2xl font-bold text-center text-[var(--color-text-primary)]">
+              Counter: {counter}
+            </h2>
+          </div>
 
-        {/* Counter Actions */}
-        <div className="flex flex-col gap-4 items-center mb-8">
-          <div className="flex gap-4 justify-between w-full">
+          {/* Counter Actions */}
+          <div className="flex gap-4 mb-8">
             <Button onClick={handleDecrement} className="flex-1">
               -
             </Button>
@@ -49,20 +52,21 @@ function App() {
               +
             </Button>
           </div>
+
+          <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
         </div>
-        <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
       </div>
-    </div>
+    </ThemeProvider>
   );
 }
 
 // Get the DOM container element
-const container = document.getElementById('root');
-if (!container) throw new Error('Root container not found');
+const container = document.getElementById("root");
+if (!container) throw new Error("Root container not found");
 const root = createRoot(container);
 
 root.render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
