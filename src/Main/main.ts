@@ -3,6 +3,11 @@ import path from "node:path";
 import started from "electron-squirrel-startup";
 import { createStore } from "./store";
 import { createBridge } from "./bridge";
+import {
+  getSubmittedChanges,
+  getPendingChanges,
+  getCurrentUser,
+} from "./Features/P4";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -82,6 +87,19 @@ app.whenReady().then(() => {
       type: window?.windowType || "main",
       id: window?.windowId || 1,
     };
+  });
+
+  // P4 API handlers
+  ipcMain.handle("p4:getSubmittedChanges", async (_event, options) => {
+    return getSubmittedChanges(options);
+  });
+
+  ipcMain.handle("p4:getPendingChanges", async (_event, options) => {
+    return getPendingChanges(options);
+  });
+
+  ipcMain.handle("p4:getCurrentUser", async () => {
+    return getCurrentUser();
   });
 
   // Create all windows

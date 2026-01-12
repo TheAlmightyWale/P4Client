@@ -18,4 +18,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 });
 
+// Expose P4 API
+contextBridge.exposeInMainWorld("p4API", {
+  getSubmittedChanges: (options?: {
+    maxCount?: number;
+    depotPath?: string;
+  }) => {
+    return ipcRenderer.invoke("p4:getSubmittedChanges", options);
+  },
+  getPendingChanges: (options?: { user?: string }) => {
+    return ipcRenderer.invoke("p4:getPendingChanges", options);
+  },
+  getCurrentUser: () => {
+    return ipcRenderer.invoke("p4:getCurrentUser");
+  },
+});
+
 console.log("[Preload] Script initialized successfully");
