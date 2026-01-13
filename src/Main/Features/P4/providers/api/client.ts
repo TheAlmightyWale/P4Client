@@ -4,7 +4,7 @@
  * Wraps the p4api package to provide a consistent interface for P4 operations.
  */
 
-import P4 from "p4api";
+import { P4 } from "p4api";
 import { getP4Config } from "../../config";
 
 export interface P4CommandResult {
