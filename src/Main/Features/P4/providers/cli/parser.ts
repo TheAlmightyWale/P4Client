@@ -1,4 +1,4 @@
-import type { ChangelistInfo } from "../../../shared/types/p4";
+import type { ChangelistInfo } from "../../../../../shared/types/p4";
 
 /**
  * Represents a parsed ztag record as key-value pairs

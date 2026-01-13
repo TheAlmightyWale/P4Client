@@ -4,7 +4,7 @@ import {
   parseChangesOutput,
   parseP4Date,
   parseUserOutput,
-} from "../../../../src/Main/Features/P4/parser";
+} from "../../../../src/Main/Features/P4/providers/cli/parser";
 
 describe("P4 Ztag Parser", () => {
   describe("parseZtagOutput", () => {

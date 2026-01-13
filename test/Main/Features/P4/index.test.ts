@@ -2,19 +2,31 @@ import {
   getSubmittedChanges,
   getPendingChanges,
   getCurrentUser,
+  setP4Config,
+  resetP4Config,
 } from "../../../../src/Main/Features/P4/index";
-import * as executor from "../../../../src/Main/Features/P4/executor";
+import { resetProvider } from "../../../../src/Main/Features/P4/factory";
+import * as executor from "../../../../src/Main/Features/P4/providers/cli/executor";
 
 // Mock the executor module
-jest.mock("../../../../src/Main/Features/P4/executor");
+jest.mock("../../../../src/Main/Features/P4/providers/cli/executor");
 
 const mockExecuteP4Command = executor.executeP4Command as jest.MockedFunction<
   typeof executor.executeP4Command
 >;
 
 describe("P4 Feature", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    // Reset to CLI provider for tests
+    resetP4Config();
+    setP4Config({ useNativeApi: false });
+    await resetProvider();
+  });
+
+  afterAll(async () => {
+    resetP4Config();
+    await resetProvider();
   });
 
   describe("getSubmittedChanges", () => {

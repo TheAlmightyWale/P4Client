@@ -1,4 +1,4 @@
-import { executeP4Command } from "../../../../src/Main/Features/P4/executor";
+import { executeP4Command } from "../../../../src/Main/Features/P4/providers/cli/executor";
 import { exec } from "child_process";
 
 // Mock child_process
@@ -8,7 +8,7 @@ jest.mock("child_process", () => ({
 
 const mockExec = exec as jest.MockedFunction<typeof exec>;
 
-describe("P4 Executor", () => {
+describe("P4 CLI Executor", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

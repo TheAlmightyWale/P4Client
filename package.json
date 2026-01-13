@@ -49,6 +49,7 @@
     "@zubridge/electron": "^2.1.1",
     "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",
+    "p4api": "^3.4.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   }
