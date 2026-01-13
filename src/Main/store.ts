@@ -1,5 +1,4 @@
 import { create, type StoreApi } from "zustand";
-import { createCounterHandlers } from "./Features/Counter";
 import { createThemeHandlers } from "./Features/Theme";
 import type { AppState } from "./Features";
 import { initialState } from "./Features";
@@ -15,13 +14,11 @@ export function createStore(): StoreApi<AppState> {
 
   // Create action handlers using the features pattern
   // All new features should be registered here
-  const counterHandlers = createCounterHandlers(store);
   const themeHandlers = createThemeHandlers(store);
 
   // Attach action handlers to the store (basic mode pattern)
   store.setState((state) => ({
     ...state,
-    ...counterHandlers,
     ...themeHandlers,
   }));
 

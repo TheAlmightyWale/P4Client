@@ -5,11 +5,6 @@ import { createStore } from "zustand/vanilla";
  * In basic mode, action handlers are properties of the state object
  */
 export interface AppState {
-  //Counter feature
-  counter: number;
-  "COUNTER:INCREMENT": () => void;
-  "COUNTER:DECREMENT": () => void;
-
   //Theme feature
   theme: "light" | "dark";
   "THEME:TOGGLE": () => void;
@@ -22,22 +17,11 @@ export interface AppState {
  * Initial state for basic mode
  */
 export const initialState: AppState = {
-  //Counter feature
-  counter: 0,
-  "COUNTER:INCREMENT": () => {
-    console.log("Increment Called");
-  },
-  "COUNTER:DECREMENT": () => {
-    console.log("Decrement Called");
-  },
-
   //Theme feature
   theme: "dark",
   "THEME:TOGGLE": () => {
     console.log("Theme toggled");
   },
-
-  //History feature
 };
 
 // create app store
