@@ -13,9 +13,8 @@ describe("P4 Executor", () => {
     jest.clearAllMocks();
   });
 
-  it("should execute p4 command and return output", async () => {
-    const mockOutput =
-      "Change 12345 on 2024/01/15 by jsmith@ws *submitted* 'Test'";
+  it("should execute p4 command with -ztag flag and return output", async () => {
+    const mockOutput = "... change 12345\n... user jsmith\n... desc Test";
 
     mockExec.mockImplementation((cmd, callback: unknown) => {
       (
@@ -30,7 +29,7 @@ describe("P4 Executor", () => {
     const result = await executeP4Command("changes -s submitted -m 1");
 
     expect(mockExec).toHaveBeenCalledWith(
-      "p4 changes -s submitted -m 1",
+      "p4 -ztag changes -s submitted -m 1",
       expect.any(Function)
     );
     expect(result.stdout).toBe(mockOutput);
@@ -80,7 +79,7 @@ describe("P4 Executor", () => {
     await expect(executeP4Command("invalid")).rejects.toThrow(errorMessage);
   });
 
-  it("should prepend p4 to the command", async () => {
+  it("should prepend p4 -ztag to the command", async () => {
     mockExec.mockImplementation((cmd, callback: unknown) => {
       (
         callback as (
@@ -93,6 +92,9 @@ describe("P4 Executor", () => {
 
     await executeP4Command("user -o");
 
-    expect(mockExec).toHaveBeenCalledWith("p4 user -o", expect.any(Function));
+    expect(mockExec).toHaveBeenCalledWith(
+      "p4 -ztag user -o",
+      expect.any(Function)
+    );
   });
 });

@@ -20,7 +20,12 @@ describe("P4 Feature", () => {
   describe("getSubmittedChanges", () => {
     it("should fetch submitted changes with default options", async () => {
       mockExecuteP4Command.mockResolvedValue({
-        stdout: `Change 12345 on 2024/01/15 by jsmith@ws *submitted* 'Test change'`,
+        stdout: `... change 12345
+... time 1705334400
+... user jsmith
+... client ws
+... status submitted
+... desc Test change`,
         stderr: "",
       });
 
@@ -29,6 +34,10 @@ describe("P4 Feature", () => {
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(1);
       expect(result.data![0].id).toBe(12345);
+      expect(result.data![0].user).toBe("jsmith");
+      expect(result.data![0].client).toBe("ws");
+      expect(result.data![0].description).toBe("Test change");
+      expect(result.data![0].status).toBe("submitted");
       expect(mockExecuteP4Command).toHaveBeenCalledWith("changes -s submitted");
     });
 
@@ -80,12 +89,43 @@ describe("P4 Feature", () => {
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(0);
     });
+
+    it("should parse multiple submitted changes", async () => {
+      mockExecuteP4Command.mockResolvedValue({
+        stdout: `... change 12345
+... time 1705334400
+... user jsmith
+... client ws
+... status submitted
+... desc First change
+
+... change 12344
+... time 1705248000
+... user jdoe
+... client ws2
+... status submitted
+... desc Second change`,
+        stderr: "",
+      });
+
+      const result = await getSubmittedChanges();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(2);
+      expect(result.data![0].id).toBe(12345);
+      expect(result.data![1].id).toBe(12344);
+    });
   });
 
   describe("getPendingChanges", () => {
     it("should fetch pending changes for specified user", async () => {
       mockExecuteP4Command.mockResolvedValue({
-        stdout: `Change 12346 on 2024/01/16 by jsmith@ws *pending* 'WIP'`,
+        stdout: `... change 12346
+... time 1705420800
+... user jsmith
+... client ws
+... status pending
+... desc WIP`,
         stderr: "",
       });
 
@@ -94,6 +134,8 @@ describe("P4 Feature", () => {
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(1);
       expect(result.data![0].status).toBe("pending");
+      expect(result.data![0].id).toBe(12346);
+      expect(result.data![0].description).toBe("WIP");
       expect(mockExecuteP4Command).toHaveBeenCalledWith(
         "changes -s pending -u jsmith"
       );
@@ -102,7 +144,10 @@ describe("P4 Feature", () => {
     it("should get current user if not specified", async () => {
       // First call for user -o, second for changes
       mockExecuteP4Command
-        .mockResolvedValueOnce({ stdout: "User:   jsmith\n", stderr: "" })
+        .mockResolvedValueOnce({
+          stdout: "... User jsmith\n... Email jsmith@example.com",
+          stderr: "",
+        })
         .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
       await getPendingChanges();
@@ -138,7 +183,9 @@ describe("P4 Feature", () => {
   describe("getCurrentUser", () => {
     it("should return current user", async () => {
       mockExecuteP4Command.mockResolvedValue({
-        stdout: "User:   jsmith\nEmail:  jsmith@example.com",
+        stdout: `... User jsmith
+... Email jsmith@example.com
+... FullName John Smith`,
         stderr: "",
       });
 

@@ -14,7 +14,8 @@ export interface ExecResult {
  * @returns Promise with stdout and stderr
  */
 export async function executeP4Command(command: string): Promise<ExecResult> {
-  const fullCommand = `p4 ${command}`;
+  // Add -ztag as a global option for tagged output format
+  const fullCommand = `p4 -ztag ${command}`;
 
   try {
     const { stdout, stderr } = await execAsync(fullCommand);
