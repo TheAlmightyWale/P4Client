@@ -1,6 +1,11 @@
 import { preloadBridge } from "@zubridge/electron/preload";
 import { contextBridge, ipcRenderer } from "electron";
 import type { AppState } from "../Main/Features";
+import type {
+  GetSubmittedChangesOptions,
+  GetPendingChangesOptions,
+  P4API,
+} from "../shared/types/p4";
 
 console.log("[Preload] Script initializing");
 
@@ -19,19 +24,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
 });
 
 // Expose P4 API
-contextBridge.exposeInMainWorld("p4API", {
-  getSubmittedChanges: (options?: {
-    maxCount?: number;
-    depotPath?: string;
-  }) => {
+const p4API: P4API = {
+  getSubmittedChanges: (options?: GetSubmittedChangesOptions) => {
     return ipcRenderer.invoke("p4:getSubmittedChanges", options);
   },
-  getPendingChanges: (options?: { user?: string }) => {
+  getPendingChanges: (options?: GetPendingChangesOptions) => {
     return ipcRenderer.invoke("p4:getPendingChanges", options);
   },
   getCurrentUser: () => {
     return ipcRenderer.invoke("p4:getCurrentUser");
   },
-});
+};
+contextBridge.exposeInMainWorld("p4API", p4API);
 
 console.log("[Preload] Script initialized successfully");

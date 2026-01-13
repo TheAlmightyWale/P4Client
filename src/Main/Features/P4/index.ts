@@ -5,10 +5,10 @@ import type {
   GetSubmittedChangesOptions,
   GetPendingChangesOptions,
   P4Result,
-} from "./types";
+} from "../../../shared/types/p4";
 
 // Re-export types for external use
-export * from "./types";
+export * from "../../../shared/types/p4";
 
 /**
  * Fetches submitted changelists from Perforce

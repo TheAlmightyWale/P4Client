@@ -7,6 +7,7 @@ import "./index.css";
 import { Button } from "./Components/button";
 import { ThemeToggle } from "./Components/themeToggle";
 import { ThemeProvider } from "./Components/ThemeProvider";
+import { ChangesSection } from "./Components/P4/ChangesSection";
 
 // Create the store hook
 const useStore = createUseStore();
@@ -51,6 +52,11 @@ function App() {
             <Button onClick={handleIncrement} className="flex-1">
               +
             </Button>
+          </div>
+
+          {/* P4 Changes Section */}
+          <div className="mb-8">
+            <ChangesSection maxCount={25} />
           </div>
 
           <ThemeToggle theme={theme} onToggle={handleThemeToggle} />

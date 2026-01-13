@@ -1,4 +1,4 @@
-import type { ChangelistInfo } from "./types";
+import type { ChangelistInfo } from "../../../shared/types/p4";
 
 /**
  * Parses the output of 'p4 changes' command
