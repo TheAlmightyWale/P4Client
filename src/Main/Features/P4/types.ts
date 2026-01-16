@@ -12,6 +12,18 @@ import type {
 } from "../../../shared/types/p4";
 
 /**
+ * Server info returned by p4 info command
+ */
+export interface ServerInfo {
+  serverVersion: string;
+  serverAddress: string;
+  serverRoot?: string;
+  serverDate?: string;
+  serverUptime?: string;
+  serverLicense?: string;
+}
+
+/**
  * Interface that both CLI and API providers must implement
  */
 export interface P4Provider {
@@ -33,6 +45,12 @@ export interface P4Provider {
    * Gets the current Perforce user
    */
   getCurrentUser(): Promise<P4Result<string>>;
+
+  /**
+   * Run p4 info command against a specific server
+   * Used for connection testing
+   */
+  runInfoCommand(p4port: string): Promise<P4Result<ServerInfo>>;
 
   /**
    * Initialize the provider (e.g., establish connection)

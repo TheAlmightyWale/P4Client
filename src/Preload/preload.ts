@@ -6,6 +6,11 @@ import type {
   GetPendingChangesOptions,
   P4API,
 } from "../shared/types/p4";
+import type {
+  ServerAPI,
+  CreateServerInput,
+  UpdateServerInput,
+} from "../shared/types/server";
 
 console.log("[Preload] Script initializing");
 
@@ -36,5 +41,19 @@ const p4API: P4API = {
   },
 };
 contextBridge.exposeInMainWorld("p4API", p4API);
+
+// Expose Server API
+const serverAPI: ServerAPI = {
+  getServers: () => ipcRenderer.invoke("server:getAll"),
+  getServer: (id: string) => ipcRenderer.invoke("server:getById", id),
+  addServer: (input: CreateServerInput) =>
+    ipcRenderer.invoke("server:add", input),
+  updateServer: (input: UpdateServerInput) =>
+    ipcRenderer.invoke("server:update", input),
+  removeServer: (id: string) => ipcRenderer.invoke("server:remove", id),
+  testConnection: (p4port: string) =>
+    ipcRenderer.invoke("server:testConnection", p4port),
+};
+contextBridge.exposeInMainWorld("serverAPI", serverAPI);
 
 console.log("[Preload] Script initialized successfully");

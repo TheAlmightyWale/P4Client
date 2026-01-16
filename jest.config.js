@@ -13,4 +13,17 @@ module.exports = {
   ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        useESM: false,
+        tsconfig: {
+          module: "CommonJS",
+          moduleResolution: "node",
+          verbatimModuleSyntax: false,
+        },
+      },
+    ],
+  },
 };

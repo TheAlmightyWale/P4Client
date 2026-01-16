@@ -8,6 +8,14 @@ import {
   getPendingChanges,
   getCurrentUser,
 } from "./Features/P4";
+import {
+  getAllServers,
+  getServerById,
+  addServer,
+  updateServer,
+  removeServer,
+  testConnection,
+} from "./Features/Server";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -100,6 +108,31 @@ app.whenReady().then(() => {
 
   ipcMain.handle("p4:getCurrentUser", async () => {
     return getCurrentUser();
+  });
+
+  // Server management handlers
+  ipcMain.handle("server:getAll", async () => {
+    return getAllServers();
+  });
+
+  ipcMain.handle("server:getById", async (_event, id: string) => {
+    return getServerById(id);
+  });
+
+  ipcMain.handle("server:add", async (_event, input) => {
+    return addServer(input);
+  });
+
+  ipcMain.handle("server:update", async (_event, input) => {
+    return updateServer(input);
+  });
+
+  ipcMain.handle("server:remove", async (_event, id: string) => {
+    return removeServer(id);
+  });
+
+  ipcMain.handle("server:testConnection", async (_event, p4port: string) => {
+    return testConnection(p4port);
   });
 
   // Create all windows

@@ -1,4 +1,4 @@
-import { AppState } from "../../Main/Features";
+import type { AppState } from "../../Main/Features";
 
 export const useStore = () => {
   // Access the store through the window.zubridge object

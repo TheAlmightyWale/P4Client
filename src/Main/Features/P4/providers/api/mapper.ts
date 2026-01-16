@@ -5,6 +5,7 @@
  */
 
 import type { ChangelistInfo } from "../../../../../shared/types/p4";
+import type { ServerInfo } from "../../types";
 
 interface P4ChangeRecord {
   change: string;
@@ -19,6 +20,15 @@ interface P4UserRecord {
   User: string;
   Email?: string;
   FullName?: string;
+}
+
+interface P4InfoRecord {
+  serverVersion?: string;
+  serverAddress?: string;
+  serverRoot?: string;
+  serverDate?: string;
+  serverUptime?: string;
+  serverLicense?: string;
 }
 
 /**
@@ -53,4 +63,18 @@ export function mapChangeRecords(
  */
 export function mapUserRecord(record?: P4UserRecord): string | null {
   return record?.User || null;
+}
+
+/**
+ * Maps p4api info record to ServerInfo type
+ */
+export function mapInfoRecord(record?: P4InfoRecord): ServerInfo {
+  return {
+    serverVersion: record?.serverVersion || "Unknown",
+    serverAddress: record?.serverAddress || "Unknown",
+    serverRoot: record?.serverRoot,
+    serverDate: record?.serverDate,
+    serverUptime: record?.serverUptime,
+    serverLicense: record?.serverLicense,
+  };
 }

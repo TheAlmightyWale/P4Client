@@ -1,4 +1,5 @@
 import type { ChangelistInfo } from "../../../../../shared/types/p4";
+import type { ServerInfo } from "../../types";
 
 /**
  * Represents a parsed ztag record as key-value pairs
@@ -119,4 +120,32 @@ export function parseP4Date(dateStr: string): Date {
   // Fallback for YYYY/MM/DD format (legacy support)
   const [year, month, day] = dateStr.split("/").map(Number);
   return new Date(year, month - 1, day);
+}
+
+/**
+ * Parses p4 -ztag info output to extract server information
+ *
+ * Example ztag output:
+ * ... userName admin
+ * ... clientName my-client
+ * ... clientRoot /home/user/workspace
+ * ... serverAddress perforce.example.com:1666
+ * ... serverRoot /opt/perforce/root
+ * ... serverDate 2024/01/15 10:30:45 -0800 PST
+ * ... serverUptime 45:12:34:56
+ * ... serverVersion P4D/LINUX26X86_64/2023.1/2468153
+ * ... serverLicense 100 users (support ends 2025/01/01)
+ */
+export function parseInfoOutput(output: string): ServerInfo {
+  const records = parseZtagOutput(output);
+  const record = records[0] || {};
+
+  return {
+    serverVersion: record.serverVersion || "Unknown",
+    serverAddress: record.serverAddress || "Unknown",
+    serverRoot: record.serverRoot,
+    serverDate: record.serverDate,
+    serverUptime: record.serverUptime,
+    serverLicense: record.serverLicense,
+  };
 }

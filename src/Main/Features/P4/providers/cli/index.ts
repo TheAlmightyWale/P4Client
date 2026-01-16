@@ -5,7 +5,7 @@
  * This is the fallback provider when the native API is not available.
  */
 
-import type { P4Provider } from "../../types";
+import type { P4Provider, ServerInfo } from "../../types";
 import type {
   ChangelistInfo,
   GetSubmittedChangesOptions,
@@ -13,7 +13,7 @@ import type {
   P4Result,
 } from "../../../../../shared/types/p4";
 import { executeP4Command } from "./executor";
-import { parseChangesOutput, parseUserOutput } from "./parser";
+import { parseChangesOutput, parseUserOutput, parseInfoOutput } from "./parser";
 
 export class CliProvider implements P4Provider {
   async getSubmittedChanges(
@@ -83,6 +83,20 @@ export class CliProvider implements P4Provider {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async runInfoCommand(p4port: string): Promise<P4Result<ServerInfo>> {
+    try {
+      const { stdout } = await executeP4Command("info", { P4PORT: p4port });
+      const serverInfo = parseInfoOutput(stdout);
+      return { success: true, data: serverInfo };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to get server info",
       };
     }
   }

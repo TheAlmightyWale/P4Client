@@ -5,7 +5,7 @@
  * for Perforce operations.
  */
 
-import type { P4Provider } from "../../types";
+import type { P4Provider, ServerInfo } from "../../types";
 import type {
   ChangelistInfo,
   GetSubmittedChangesOptions,
@@ -13,7 +13,7 @@ import type {
   P4Result,
 } from "../../../../../shared/types/p4";
 import { P4Client } from "./client";
-import { mapChangeRecords, mapUserRecord } from "./mapper";
+import { mapChangeRecords, mapUserRecord, mapInfoRecord } from "./mapper";
 
 export class ApiProvider implements P4Provider {
   private client: P4Client;
@@ -107,6 +107,27 @@ export class ApiProvider implements P4Provider {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async runInfoCommand(p4port: string): Promise<P4Result<ServerInfo>> {
+    try {
+      // Create a temporary client with the specified P4PORT
+      const tempClient = new P4Client({ P4PORT: p4port });
+      await tempClient.connect();
+      const result = await tempClient.runCommand("info");
+      await tempClient.disconnect();
+
+      const serverInfo = mapInfoRecord(
+        result.stat?.[0] as unknown as Parameters<typeof mapInfoRecord>[0]
+      );
+      return { success: true, data: serverInfo };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to get server info",
       };
     }
   }
