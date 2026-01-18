@@ -25,10 +25,20 @@ export interface ServerInfo {
 
 /**
  * Login result from p4 login command
+ * Note: ticket is no longer returned since it's stored in the ticket file
  */
 export interface P4LoginResult {
-  ticket: string;
-  expiresAt?: string;
+  success: boolean;
+  expiresAt?: string; // Optional - if we can parse it from output
+}
+
+/**
+ * Ticket information from p4 tickets command
+ */
+export interface P4TicketInfo {
+  host: string; // Server address (p4port)
+  user: string; // Username
+  ticket: string; // Ticket value
 }
 
 /**
@@ -75,13 +85,14 @@ export interface P4Provider {
   logout(p4port: string, username: string): Promise<P4Result<void>>;
 
   /**
-   * Validate an existing ticket
+   * Get all valid tickets from the ticket file
    */
-  validateTicket(
-    p4port: string,
-    username: string,
-    ticket: string
-  ): Promise<boolean>;
+  getTickets(): Promise<P4Result<P4TicketInfo[]>>;
+
+  /**
+   * Check if a valid ticket exists for a specific server/user
+   */
+  hasValidTicket(p4port: string, username: string): Promise<boolean>;
 
   /**
    * Initialize the provider (e.g., establish connection)

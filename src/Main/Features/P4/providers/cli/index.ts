@@ -5,7 +5,12 @@
  * This is the fallback provider when the native API is not available.
  */
 
-import type { P4Provider, ServerInfo, P4LoginResult } from "../../types";
+import type {
+  P4Provider,
+  ServerInfo,
+  P4LoginResult,
+  P4TicketInfo,
+} from "../../types";
 import type {
   ChangelistInfo,
   GetSubmittedChangesOptions,
@@ -13,7 +18,12 @@ import type {
   P4Result,
 } from "../../../../../shared/types/p4";
 import { executeP4Command, executeP4CommandWithInput } from "./executor";
-import { parseChangesOutput, parseUserOutput, parseInfoOutput } from "./parser";
+import {
+  parseChangesOutput,
+  parseUserOutput,
+  parseInfoOutput,
+  parseTicketsOutput,
+} from "./parser";
 
 export class CliProvider implements P4Provider {
   async getSubmittedChanges(
@@ -107,9 +117,10 @@ export class CliProvider implements P4Provider {
     password: string
   ): Promise<P4Result<P4LoginResult>> {
     try {
-      // p4 login reads password from stdin and -p prints the ticket
-      const { stdout } = await executeP4CommandWithInput(
-        "login -p",
+      // p4 login reads password from stdin
+      // Remove -p flag - let p4 store ticket in ticket file
+      await executeP4CommandWithInput(
+        "login",
         {
           P4PORT: p4port,
           P4USER: username,
@@ -119,19 +130,9 @@ export class CliProvider implements P4Provider {
         }
       );
 
-      // The ticket is printed to stdout
-      const ticket = stdout.trim();
-
-      if (!ticket) {
-        return {
-          success: false,
-          error: "No ticket received from login",
-        };
-      }
-
       return {
         success: true,
-        data: { ticket },
+        data: { success: true },
       };
     } catch (error) {
       return {
@@ -157,22 +158,27 @@ export class CliProvider implements P4Provider {
     }
   }
 
-  async validateTicket(
-    p4port: string,
-    username: string,
-    ticket: string
-  ): Promise<boolean> {
+  async getTickets(): Promise<P4Result<P4TicketInfo[]>> {
     try {
-      // p4 login -s checks ticket status without prompting
-      await executeP4Command("login -s", {
-        P4PORT: p4port,
-        P4USER: username,
-        P4TICKET: ticket,
-      });
+      const { stdout } = await executeP4Command("tickets");
+      const tickets = parseTicketsOutput(stdout);
+      return { success: true, data: tickets };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get tickets",
+      };
+    }
+  }
 
-      return true;
-    } catch {
+  async hasValidTicket(p4port: string, username: string): Promise<boolean> {
+    const result = await this.getTickets();
+    if (!result.success || !result.data) {
       return false;
     }
+
+    return result.data.some(
+      (ticket) => ticket.host === p4port && ticket.user === username
+    );
   }
 }

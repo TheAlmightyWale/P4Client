@@ -1,5 +1,5 @@
 import type { ChangelistInfo } from "../../../../../shared/types/p4";
-import type { ServerInfo } from "../../types";
+import type { ServerInfo, P4TicketInfo } from "../../types";
 
 /**
  * Represents a parsed ztag record as key-value pairs
@@ -148,4 +148,58 @@ export function parseInfoOutput(output: string): ServerInfo {
     serverUptime: record.serverUptime,
     serverLicense: record.serverLicense,
   };
+}
+
+/**
+ * Parses p4 -ztag tickets output
+ *
+ * Example ztag output:
+ * ... user testuser
+ * ... ticket ABC123DEF456
+ * ... Host perforce.example.com:1666
+ * ... user admin
+ * ... ticket XYZ789
+ * ... Host ssl:other-server:1666
+ *
+ * Note: The tickets command uses "Host" (capital H) as the field name
+ */
+export function parseTicketsOutput(output: string): P4TicketInfo[] {
+  const tickets: P4TicketInfo[] = [];
+
+  // Split output into lines and process
+  const lines = output.split("\n");
+  let currentTicket: Partial<P4TicketInfo> = {};
+
+  for (const line of lines) {
+    if (line.startsWith("... ")) {
+      const content = line.substring(4); // Remove "... " prefix
+      const spaceIndex = content.indexOf(" ");
+
+      if (spaceIndex === -1) {
+        continue;
+      }
+
+      const fieldName = content.substring(0, spaceIndex);
+      const fieldValue = content.substring(spaceIndex + 1);
+
+      if (fieldName === "user") {
+        // Start of a new ticket record
+        if (currentTicket.user && currentTicket.ticket && currentTicket.host) {
+          tickets.push(currentTicket as P4TicketInfo);
+        }
+        currentTicket = { user: fieldValue };
+      } else if (fieldName === "ticket") {
+        currentTicket.ticket = fieldValue;
+      } else if (fieldName === "Host") {
+        currentTicket.host = fieldValue;
+      }
+    }
+  }
+
+  // Push the last ticket if complete
+  if (currentTicket.user && currentTicket.ticket && currentTicket.host) {
+    tickets.push(currentTicket as P4TicketInfo);
+  }
+
+  return tickets;
 }

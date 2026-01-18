@@ -19,6 +19,7 @@ import {
   logout,
   getSessionStatus,
   validateSession,
+  recoverSession,
 } from "../../../../src/Main/Features/Server/auth";
 import * as sessionModule from "../../../../src/Main/Features/Server/session";
 import * as storeModule from "../../../../src/Main/Features/Server/store";
@@ -42,7 +43,6 @@ describe("Auth Module", () => {
   const mockSession: ServerSession = {
     serverId: "server-1",
     username: "testuser",
-    ticket: "ABC123",
     loginTime: "2024-01-01T00:00:00.000Z",
   };
 
@@ -50,7 +50,8 @@ describe("Auth Module", () => {
   const mockProvider: jest.Mocked<P4Provider> = {
     login: jest.fn(),
     logout: jest.fn(),
-    validateTicket: jest.fn(),
+    getTickets: jest.fn(),
+    hasValidTicket: jest.fn(),
     getSubmittedChanges: jest.fn(),
     getPendingChanges: jest.fn(),
     getCurrentUser: jest.fn(),
@@ -86,7 +87,7 @@ describe("Auth Module", () => {
       mockedGetServerById.mockReturnValue(mockServer);
       mockProvider.login.mockResolvedValue({
         success: true,
-        data: { ticket: "ABC123", expiresAt: "2024-01-02T00:00:00.000Z" },
+        data: { success: true },
       });
 
       const result = await login({
@@ -106,7 +107,6 @@ describe("Auth Module", () => {
         expect.objectContaining({
           serverId: "server-1",
           username: "testuser",
-          ticket: "ABC123",
         })
       );
     });
@@ -115,7 +115,6 @@ describe("Auth Module", () => {
       const otherSession: ServerSession = {
         serverId: "server-2",
         username: "otheruser",
-        ticket: "OTHER123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockedGetActiveSession.mockReturnValue(otherSession);
@@ -186,7 +185,7 @@ describe("Auth Module", () => {
       mockedGetServerById.mockReturnValue(mockServer);
       mockProvider.login.mockResolvedValue({
         success: true,
-        data: { ticket: "NEWTICKET" },
+        data: { success: true },
       });
 
       const result = await login({
@@ -229,7 +228,6 @@ describe("Auth Module", () => {
       const otherSession: ServerSession = {
         serverId: "server-2",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockedGetActiveSession.mockReturnValue(otherSession);
@@ -306,21 +304,20 @@ describe("Auth Module", () => {
       const isValid = await validateSession();
 
       expect(isValid).toBe(false);
-      expect(mockProvider.validateTicket).not.toHaveBeenCalled();
+      expect(mockProvider.hasValidTicket).not.toHaveBeenCalled();
     });
 
     it("should return true when ticket is valid", async () => {
       mockedGetActiveSession.mockReturnValue(mockSession);
       mockedGetServerById.mockReturnValue(mockServer);
-      mockProvider.validateTicket.mockResolvedValue(true);
+      mockProvider.hasValidTicket.mockResolvedValue(true);
 
       const isValid = await validateSession();
 
       expect(isValid).toBe(true);
-      expect(mockProvider.validateTicket).toHaveBeenCalledWith(
+      expect(mockProvider.hasValidTicket).toHaveBeenCalledWith(
         "ssl:perforce.example.com:1666",
-        "testuser",
-        "ABC123"
+        "testuser"
       );
       expect(mockedClearSession).not.toHaveBeenCalled();
     });
@@ -328,7 +325,7 @@ describe("Auth Module", () => {
     it("should return false and clear session when ticket is invalid", async () => {
       mockedGetActiveSession.mockReturnValue(mockSession);
       mockedGetServerById.mockReturnValue(mockServer);
-      mockProvider.validateTicket.mockResolvedValue(false);
+      mockProvider.hasValidTicket.mockResolvedValue(false);
 
       const isValid = await validateSession();
 
@@ -344,17 +341,75 @@ describe("Auth Module", () => {
 
       expect(isValid).toBe(false);
       expect(mockedClearSession).toHaveBeenCalled();
-      expect(mockProvider.validateTicket).not.toHaveBeenCalled();
+      expect(mockProvider.hasValidTicket).not.toHaveBeenCalled();
     });
 
     it("should return false and clear session when validation throws", async () => {
       mockedGetActiveSession.mockReturnValue(mockSession);
       mockedGetServerById.mockReturnValue(mockServer);
-      mockProvider.validateTicket.mockRejectedValue(new Error("Network error"));
+      mockProvider.hasValidTicket.mockRejectedValue(new Error("Network error"));
 
       const isValid = await validateSession();
 
       expect(isValid).toBe(false);
+      expect(mockedClearSession).toHaveBeenCalled();
+    });
+  });
+
+  describe("recoverSession", () => {
+    it("should return false when no session", async () => {
+      mockedGetActiveSession.mockReturnValue(null);
+
+      const recovered = await recoverSession();
+
+      expect(recovered).toBe(false);
+      expect(mockProvider.hasValidTicket).not.toHaveBeenCalled();
+    });
+
+    it("should return true when valid ticket exists in ticket file", async () => {
+      mockedGetActiveSession.mockReturnValue(mockSession);
+      mockedGetServerById.mockReturnValue(mockServer);
+      mockProvider.hasValidTicket.mockResolvedValue(true);
+
+      const recovered = await recoverSession();
+
+      expect(recovered).toBe(true);
+      expect(mockProvider.hasValidTicket).toHaveBeenCalledWith(
+        "ssl:perforce.example.com:1666",
+        "testuser"
+      );
+      expect(mockedClearSession).not.toHaveBeenCalled();
+    });
+
+    it("should return false and clear session when no valid ticket", async () => {
+      mockedGetActiveSession.mockReturnValue(mockSession);
+      mockedGetServerById.mockReturnValue(mockServer);
+      mockProvider.hasValidTicket.mockResolvedValue(false);
+
+      const recovered = await recoverSession();
+
+      expect(recovered).toBe(false);
+      expect(mockedClearSession).toHaveBeenCalled();
+    });
+
+    it("should return false and clear session when server not found", async () => {
+      mockedGetActiveSession.mockReturnValue(mockSession);
+      mockedGetServerById.mockReturnValue(null);
+
+      const recovered = await recoverSession();
+
+      expect(recovered).toBe(false);
+      expect(mockedClearSession).toHaveBeenCalled();
+    });
+
+    it("should return false and clear session when hasValidTicket throws", async () => {
+      mockedGetActiveSession.mockReturnValue(mockSession);
+      mockedGetServerById.mockReturnValue(mockServer);
+      mockProvider.hasValidTicket.mockRejectedValue(new Error("Network error"));
+
+      const recovered = await recoverSession();
+
+      expect(recovered).toBe(false);
       expect(mockedClearSession).toHaveBeenCalled();
     });
   });

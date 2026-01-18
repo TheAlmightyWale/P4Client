@@ -5,7 +5,12 @@
  * for Perforce operations.
  */
 
-import type { P4Provider, ServerInfo, P4LoginResult } from "../../types";
+import type {
+  P4Provider,
+  ServerInfo,
+  P4LoginResult,
+  P4TicketInfo,
+} from "../../types";
 import type {
   ChangelistInfo,
   GetSubmittedChangesOptions,
@@ -144,19 +149,13 @@ export class ApiProvider implements P4Provider {
 
       // Run login command with password
       // The p4api package handles password input differently
-      const result = await tempClient.runLoginCommand(password);
+      // The ticket is stored in the ticket file automatically
+      await tempClient.runLoginCommand(password);
       await tempClient.disconnect();
 
-      if (result.ticket) {
-        return {
-          success: true,
-          data: { ticket: result.ticket },
-        };
-      }
-
       return {
-        success: false,
-        error: "No ticket received from login",
+        success: true,
+        data: { success: true },
       };
     } catch (error) {
       return {
@@ -182,26 +181,47 @@ export class ApiProvider implements P4Provider {
     }
   }
 
-  async validateTicket(
-    p4port: string,
-    username: string,
-    ticket: string
-  ): Promise<boolean> {
+  async getTickets(): Promise<P4Result<P4TicketInfo[]>> {
     try {
-      const tempClient = new P4Client({
-        P4PORT: p4port,
-        P4USER: username,
-        P4TICKET: ticket,
-      });
-      await tempClient.connect();
+      // Run p4 tickets command to get all valid tickets
+      const result = await this.client.runCommand("tickets");
 
-      // p4 login -s checks ticket status
-      await tempClient.runCommand("login", "-s");
-      await tempClient.disconnect();
+      // Parse the tickets from the result
+      // The API returns tickets in a structured format
+      const tickets: P4TicketInfo[] = [];
+      if (result.stat) {
+        for (const record of result.stat as unknown as Array<{
+          user?: string;
+          ticket?: string;
+          Host?: string;
+        }>) {
+          if (record.user && record.ticket && record.Host) {
+            tickets.push({
+              user: record.user,
+              ticket: record.ticket,
+              host: record.Host,
+            });
+          }
+        }
+      }
 
-      return true;
-    } catch {
+      return { success: true, data: tickets };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get tickets",
+      };
+    }
+  }
+
+  async hasValidTicket(p4port: string, username: string): Promise<boolean> {
+    const result = await this.getTickets();
+    if (!result.success || !result.data) {
       return false;
     }
+
+    return result.data.some(
+      (ticket) => ticket.host === p4port && ticket.user === username
+    );
   }
 }

@@ -48,13 +48,13 @@ export interface ConnectionTestResult {
 
 /**
  * Stored session data for a logged-in server
+ * Note: Ticket is NOT stored here - it's managed by the p4 ticket file
  */
 export interface ServerSession {
   serverId: string;
   username: string;
-  ticket: string;
   loginTime: string;
-  expiresAt?: string;
+  // Removed: ticket, expiresAt - now managed by p4 ticket file
 }
 
 /**

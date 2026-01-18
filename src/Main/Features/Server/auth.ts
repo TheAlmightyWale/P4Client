@@ -10,6 +10,9 @@ import type {
 
 /**
  * Login to a Perforce server
+ *
+ * Note: This function always calls p4 login even if a valid ticket already exists.
+ * This ensures the ticket lifetime is automatically extended each time the user logs in.
  */
 export async function login(input: LoginInput): Promise<LoginResult> {
   const { serverId, username, password } = input;
@@ -33,17 +36,16 @@ export async function login(input: LoginInput): Promise<LoginResult> {
   try {
     const provider = getProvider();
 
-    // Run p4 login
+    // Always run p4 login - this extends the ticket lifetime if one already exists
+    // The ticket is stored in the p4 ticket file, not in our session store
     const result = await provider.login(server.p4port, username, password);
 
-    if (result.success && result.data?.ticket) {
-      // Save session
+    if (result.success) {
+      // Save session WITHOUT ticket - ticket is managed by p4 ticket file
       saveSession({
         serverId,
         username,
-        ticket: result.data.ticket,
         loginTime: new Date().toISOString(),
-        expiresAt: result.data.expiresAt,
       });
 
       return {
@@ -121,7 +123,7 @@ export function getSessionStatus(): SessionStatus {
 }
 
 /**
- * Validate current session by checking ticket
+ * Validate current session by checking if a valid ticket exists in the ticket file
  */
 export async function validateSession(): Promise<boolean> {
   const session = getActiveSession();
@@ -138,10 +140,11 @@ export async function validateSession(): Promise<boolean> {
 
   try {
     const provider = getProvider();
-    const isValid = await provider.validateTicket(
+
+    // Use hasValidTicket instead of validateTicket
+    const isValid = await provider.hasValidTicket(
       server.p4port,
-      session.username,
-      session.ticket
+      session.username
     );
 
     if (!isValid) {
@@ -149,6 +152,43 @@ export async function validateSession(): Promise<boolean> {
     }
 
     return isValid;
+  } catch {
+    clearSession();
+    return false;
+  }
+}
+
+/**
+ * Recover session on app startup by checking if there's a valid ticket in the ticket file
+ * for the active session's server/user combination.
+ */
+export async function recoverSession(): Promise<boolean> {
+  const session = getActiveSession();
+
+  if (!session) {
+    return false;
+  }
+
+  const server = getServerById(session.serverId);
+  if (!server) {
+    clearSession();
+    return false;
+  }
+
+  try {
+    // Check if there's still a valid ticket in the ticket file
+    const provider = getProvider();
+    const hasTicket = await provider.hasValidTicket(
+      server.p4port,
+      session.username
+    );
+
+    if (!hasTicket) {
+      clearSession();
+      return false;
+    }
+
+    return true;
   } catch {
     clearSession();
     return false;

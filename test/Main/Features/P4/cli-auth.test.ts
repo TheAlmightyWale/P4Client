@@ -15,9 +15,9 @@ describe("CliProvider Authentication", () => {
   });
 
   describe("login", () => {
-    it("should login successfully and return ticket", async () => {
+    it("should login successfully", async () => {
       mockExecutor.executeP4CommandWithInput.mockResolvedValue({
-        stdout: "ABC123DEF456GHI789JKL012MNO345PQ",
+        stdout: "User testuser logged in.",
         stderr: "",
       });
 
@@ -28,9 +28,9 @@ describe("CliProvider Authentication", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.ticket).toBe("ABC123DEF456GHI789JKL012MNO345PQ");
+      expect(result.data?.success).toBe(true);
       expect(mockExecutor.executeP4CommandWithInput).toHaveBeenCalledWith(
-        "login -p",
+        "login",
         {
           P4PORT: "ssl:perforce.example.com:1666",
           P4USER: "testuser",
@@ -54,22 +54,6 @@ describe("CliProvider Authentication", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("Password invalid");
-    });
-
-    it("should return error when no ticket received", async () => {
-      mockExecutor.executeP4CommandWithInput.mockResolvedValue({
-        stdout: "",
-        stderr: "",
-      });
-
-      const result = await provider.login(
-        "ssl:perforce.example.com:1666",
-        "testuser",
-        "password123"
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("No ticket received from login");
     });
   });
 
@@ -107,53 +91,123 @@ describe("CliProvider Authentication", () => {
     });
   });
 
-  describe("validateTicket", () => {
-    it("should return true when ticket is valid", async () => {
+  describe("getTickets", () => {
+    it("should return all tickets from ticket file", async () => {
+      const ticketsOutput = `... user testuser
+... ticket ABC123DEF456
+... Host ssl:perforce.example.com:1666
+... user admin
+... ticket XYZ789ABC
+... Host ssl:other-server:1666`;
+
       mockExecutor.executeP4Command.mockResolvedValue({
-        stdout: "User testuser ticket expires in 43200 seconds.",
+        stdout: ticketsOutput,
         stderr: "",
       });
 
-      const isValid = await provider.validateTicket(
-        "ssl:perforce.example.com:1666",
-        "testuser",
-        "ABC123"
-      );
+      const result = await provider.getTickets();
 
-      expect(isValid).toBe(true);
-      expect(mockExecutor.executeP4Command).toHaveBeenCalledWith("login -s", {
-        P4PORT: "ssl:perforce.example.com:1666",
-        P4USER: "testuser",
-        P4TICKET: "ABC123",
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(2);
+      expect(result.data?.[0]).toEqual({
+        user: "testuser",
+        ticket: "ABC123DEF456",
+        host: "ssl:perforce.example.com:1666",
       });
+      expect(result.data?.[1]).toEqual({
+        user: "admin",
+        ticket: "XYZ789ABC",
+        host: "ssl:other-server:1666",
+      });
+      expect(mockExecutor.executeP4Command).toHaveBeenCalledWith("tickets");
     });
 
-    it("should return false when ticket is invalid", async () => {
+    it("should return empty array when no tickets exist", async () => {
+      mockExecutor.executeP4Command.mockResolvedValue({
+        stdout: "",
+        stderr: "",
+      });
+
+      const result = await provider.getTickets();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(0);
+    });
+
+    it("should return error when command fails", async () => {
       mockExecutor.executeP4Command.mockRejectedValue(
-        new Error("Your session has expired")
+        new Error("Command failed")
       );
 
-      const isValid = await provider.validateTicket(
+      const result = await provider.getTickets();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Command failed");
+    });
+  });
+
+  describe("hasValidTicket", () => {
+    it("should return true when ticket exists for server/user", async () => {
+      const ticketsOutput = `... user testuser
+... ticket ABC123DEF456
+... Host ssl:perforce.example.com:1666`;
+
+      mockExecutor.executeP4Command.mockResolvedValue({
+        stdout: ticketsOutput,
+        stderr: "",
+      });
+
+      const hasTicket = await provider.hasValidTicket(
         "ssl:perforce.example.com:1666",
-        "testuser",
-        "EXPIRED123"
+        "testuser"
       );
 
-      expect(isValid).toBe(false);
+      expect(hasTicket).toBe(true);
     });
 
-    it("should return false when connection fails", async () => {
+    it("should return false when no ticket for server/user", async () => {
+      const ticketsOutput = `... user otheruser
+... ticket ABC123DEF456
+... Host ssl:perforce.example.com:1666`;
+
+      mockExecutor.executeP4Command.mockResolvedValue({
+        stdout: ticketsOutput,
+        stderr: "",
+      });
+
+      const hasTicket = await provider.hasValidTicket(
+        "ssl:perforce.example.com:1666",
+        "testuser"
+      );
+
+      expect(hasTicket).toBe(false);
+    });
+
+    it("should return false when no tickets exist", async () => {
+      mockExecutor.executeP4Command.mockResolvedValue({
+        stdout: "",
+        stderr: "",
+      });
+
+      const hasTicket = await provider.hasValidTicket(
+        "ssl:perforce.example.com:1666",
+        "testuser"
+      );
+
+      expect(hasTicket).toBe(false);
+    });
+
+    it("should return false when getTickets fails", async () => {
       mockExecutor.executeP4Command.mockRejectedValue(
         new Error("Connection refused")
       );
 
-      const isValid = await provider.validateTicket(
+      const hasTicket = await provider.hasValidTicket(
         "ssl:perforce.example.com:1666",
-        "testuser",
-        "ABC123"
+        "testuser"
       );
 
-      expect(isValid).toBe(false);
+      expect(hasTicket).toBe(false);
     });
   });
 });

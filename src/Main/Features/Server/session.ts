@@ -10,7 +10,7 @@ const sessionStore = new Store<SessionStoreSchema>({
   defaults: {
     activeSession: null,
   },
-  encryptionKey: "p4client-session-key", // Encrypt sensitive data
+  // Removed: encryptionKey - no longer storing sensitive data (ticket is in p4 ticket file)
 });
 
 /**

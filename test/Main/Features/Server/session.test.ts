@@ -42,7 +42,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockStoreData.activeSession = mockSession;
@@ -52,22 +51,7 @@ describe("Session Store", () => {
       expect(session).toEqual(mockSession);
       expect(session?.serverId).toBe("server-1");
       expect(session?.username).toBe("testuser");
-      expect(session?.ticket).toBe("ABC123");
-    });
-
-    it("should return session with optional expiresAt field", () => {
-      const mockSession: ServerSession = {
-        serverId: "server-1",
-        username: "testuser",
-        ticket: "ABC123",
-        loginTime: "2024-01-01T00:00:00.000Z",
-        expiresAt: "2024-01-02T00:00:00.000Z",
-      };
-      mockStoreData.activeSession = mockSession;
-
-      const session = getActiveSession();
-
-      expect(session?.expiresAt).toBe("2024-01-02T00:00:00.000Z");
+      expect(session?.loginTime).toBe("2024-01-01T00:00:00.000Z");
     });
   });
 
@@ -76,7 +60,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
 
@@ -89,13 +72,11 @@ describe("Session Store", () => {
       const session1: ServerSession = {
         serverId: "server-1",
         username: "user1",
-        ticket: "TICKET1",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       const session2: ServerSession = {
         serverId: "server-2",
         username: "user2",
-        ticket: "TICKET2",
         loginTime: "2024-01-02T00:00:00.000Z",
       };
 
@@ -106,21 +87,6 @@ describe("Session Store", () => {
       expect(mockStoreData.activeSession).toEqual(session2);
       expect(mockStoreData.activeSession).not.toEqual(session1);
     });
-
-    it("should save session with all fields including optional expiresAt", () => {
-      const mockSession: ServerSession = {
-        serverId: "server-1",
-        username: "testuser",
-        ticket: "ABC123",
-        loginTime: "2024-01-01T00:00:00.000Z",
-        expiresAt: "2024-01-02T00:00:00.000Z",
-      };
-
-      saveSession(mockSession);
-
-      const saved = mockStoreData.activeSession as ServerSession;
-      expect(saved.expiresAt).toBe("2024-01-02T00:00:00.000Z");
-    });
   });
 
   describe("clearSession", () => {
@@ -128,7 +94,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockStoreData.activeSession = mockSession;
@@ -150,7 +115,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
 
@@ -175,7 +139,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockStoreData.activeSession = mockSession;
@@ -189,7 +152,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockStoreData.activeSession = mockSession;
@@ -203,13 +165,11 @@ describe("Session Store", () => {
       const session1: ServerSession = {
         serverId: "server-1",
         username: "user1",
-        ticket: "TICKET1",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       const session2: ServerSession = {
         serverId: "server-2",
         username: "user2",
-        ticket: "TICKET2",
         loginTime: "2024-01-02T00:00:00.000Z",
       };
 
@@ -226,7 +186,6 @@ describe("Session Store", () => {
       const mockSession: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       mockStoreData.activeSession = mockSession;
@@ -249,7 +208,6 @@ describe("Session Store", () => {
       const session: ServerSession = {
         serverId: "server-1",
         username: "testuser",
-        ticket: "ABC123",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       saveSession(session);
@@ -270,13 +228,11 @@ describe("Session Store", () => {
       const server1Session: ServerSession = {
         serverId: "server-1",
         username: "user1",
-        ticket: "TICKET1",
         loginTime: "2024-01-01T00:00:00.000Z",
       };
       const server2Session: ServerSession = {
         serverId: "server-2",
         username: "user2",
-        ticket: "TICKET2",
         loginTime: "2024-01-02T00:00:00.000Z",
       };
 
