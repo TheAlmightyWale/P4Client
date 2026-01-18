@@ -10,6 +10,7 @@ import type {
   ServerAPI,
   CreateServerInput,
   UpdateServerInput,
+  LoginInput,
 } from "../shared/types/server";
 
 console.log("[Preload] Script initializing");
@@ -44,6 +45,7 @@ contextBridge.exposeInMainWorld("p4API", p4API);
 
 // Expose Server API
 const serverAPI: ServerAPI = {
+  // Server management methods
   getServers: () => ipcRenderer.invoke("server:getAll"),
   getServer: (id: string) => ipcRenderer.invoke("server:getById", id),
   addServer: (input: CreateServerInput) =>
@@ -53,6 +55,12 @@ const serverAPI: ServerAPI = {
   removeServer: (id: string) => ipcRenderer.invoke("server:remove", id),
   testConnection: (p4port: string) =>
     ipcRenderer.invoke("server:testConnection", p4port),
+
+  // Authentication methods
+  login: (input: LoginInput) => ipcRenderer.invoke("server:login", input),
+  logout: (serverId: string) => ipcRenderer.invoke("server:logout", serverId),
+  getSessionStatus: () => ipcRenderer.invoke("server:getSessionStatus"),
+  validateSession: () => ipcRenderer.invoke("server:validateSession"),
 };
 contextBridge.exposeInMainWorld("serverAPI", serverAPI);
 

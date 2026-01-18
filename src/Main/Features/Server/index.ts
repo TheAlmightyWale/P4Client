@@ -13,7 +13,11 @@ import {
 } from "./store";
 import { getProvider } from "../P4/factory";
 
+// Re-export store functions
 export { getAllServers, getServerById };
+
+// Re-export auth functions
+export { login, logout, getSessionStatus, validateSession } from "./auth";
 
 /**
  * Add a new server configuration

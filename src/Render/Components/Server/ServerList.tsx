@@ -3,20 +3,27 @@ import { ServerCard } from "./ServerCard";
 import type {
   ServerConfig,
   ConnectionTestResult,
+  SessionStatus,
 } from "../../../shared/types/server";
 
 interface ServerListProps {
   servers: ServerConfig[];
+  sessionStatus: SessionStatus;
   onEdit: (server: ServerConfig) => void;
   onRemove: (id: string) => Promise<boolean>;
   onTestConnection: (p4port: string) => Promise<ConnectionTestResult>;
+  onLogin: (server: ServerConfig) => void;
+  onLogout: (serverId: string) => Promise<void>;
 }
 
 export const ServerList: React.FC<ServerListProps> = ({
   servers,
+  sessionStatus,
   onEdit,
   onRemove,
   onTestConnection,
+  onLogin,
+  onLogout,
 }) => {
   if (servers.length === 0) {
     return (
@@ -31,15 +38,24 @@ export const ServerList: React.FC<ServerListProps> = ({
 
   return (
     <div className="space-y-4">
-      {servers.map((server) => (
-        <ServerCard
-          key={server.id}
-          server={server}
-          onEdit={() => onEdit(server)}
-          onRemove={() => onRemove(server.id)}
-          onTestConnection={() => onTestConnection(server.p4port)}
-        />
-      ))}
+      {servers.map((server) => {
+        const isActiveServer = sessionStatus.serverId === server.id;
+        const isLoggedIn = isActiveServer && sessionStatus.isLoggedIn;
+
+        return (
+          <ServerCard
+            key={server.id}
+            server={server}
+            isLoggedIn={isLoggedIn}
+            isActiveServer={isActiveServer}
+            onEdit={() => onEdit(server)}
+            onRemove={() => onRemove(server.id)}
+            onTestConnection={() => onTestConnection(server.p4port)}
+            onLogin={() => onLogin(server)}
+            onLogout={() => onLogout(server.id)}
+          />
+        );
+      })}
     </div>
   );
 };

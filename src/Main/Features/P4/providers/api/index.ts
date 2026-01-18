@@ -5,7 +5,7 @@
  * for Perforce operations.
  */
 
-import type { P4Provider, ServerInfo } from "../../types";
+import type { P4Provider, ServerInfo, P4LoginResult } from "../../types";
 import type {
   ChangelistInfo,
   GetSubmittedChangesOptions,
@@ -129,6 +129,79 @@ export class ApiProvider implements P4Provider {
         error:
           error instanceof Error ? error.message : "Failed to get server info",
       };
+    }
+  }
+
+  async login(
+    p4port: string,
+    username: string,
+    password: string
+  ): Promise<P4Result<P4LoginResult>> {
+    try {
+      // Create a temporary client with the specified P4PORT and P4USER
+      const tempClient = new P4Client({ P4PORT: p4port, P4USER: username });
+      await tempClient.connect();
+
+      // Run login command with password
+      // The p4api package handles password input differently
+      const result = await tempClient.runLoginCommand(password);
+      await tempClient.disconnect();
+
+      if (result.ticket) {
+        return {
+          success: true,
+          data: { ticket: result.ticket },
+        };
+      }
+
+      return {
+        success: false,
+        error: "No ticket received from login",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Login failed",
+      };
+    }
+  }
+
+  async logout(p4port: string, username: string): Promise<P4Result<void>> {
+    try {
+      const tempClient = new P4Client({ P4PORT: p4port, P4USER: username });
+      await tempClient.connect();
+      await tempClient.runCommand("logout");
+      await tempClient.disconnect();
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Logout failed",
+      };
+    }
+  }
+
+  async validateTicket(
+    p4port: string,
+    username: string,
+    ticket: string
+  ): Promise<boolean> {
+    try {
+      const tempClient = new P4Client({
+        P4PORT: p4port,
+        P4USER: username,
+        P4TICKET: ticket,
+      });
+      await tempClient.connect();
+
+      // p4 login -s checks ticket status
+      await tempClient.runCommand("login", "-s");
+      await tempClient.disconnect();
+
+      return true;
+    } catch {
+      return false;
     }
   }
 }

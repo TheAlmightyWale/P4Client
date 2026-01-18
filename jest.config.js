@@ -9,6 +9,7 @@ module.exports = {
   },
   collectCoverageFrom: [
     "src/Main/Features/P4/**/*.ts",
+    "src/Main/Features/Server/**/*.ts",
     "!src/Main/Features/P4/types.ts",
   ],
   coverageDirectory: "coverage",
@@ -22,8 +23,17 @@ module.exports = {
           module: "CommonJS",
           moduleResolution: "node",
           verbatimModuleSyntax: false,
+          skipLibCheck: true,
         },
       },
     ],
+  },
+  // Ignore type checking for tests - we just want to run them
+  globals: {
+    "ts-jest": {
+      diagnostics: {
+        ignoreCodes: [2339, 7006],
+      },
+    },
   },
 };

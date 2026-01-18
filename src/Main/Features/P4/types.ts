@@ -24,6 +24,14 @@ export interface ServerInfo {
 }
 
 /**
+ * Login result from p4 login command
+ */
+export interface P4LoginResult {
+  ticket: string;
+  expiresAt?: string;
+}
+
+/**
  * Interface that both CLI and API providers must implement
  */
 export interface P4Provider {
@@ -51,6 +59,29 @@ export interface P4Provider {
    * Used for connection testing
    */
   runInfoCommand(p4port: string): Promise<P4Result<ServerInfo>>;
+
+  /**
+   * Login to a Perforce server
+   */
+  login(
+    p4port: string,
+    username: string,
+    password: string
+  ): Promise<P4Result<P4LoginResult>>;
+
+  /**
+   * Logout from a Perforce server
+   */
+  logout(p4port: string, username: string): Promise<P4Result<void>>;
+
+  /**
+   * Validate an existing ticket
+   */
+  validateTicket(
+    p4port: string,
+    username: string,
+    ticket: string
+  ): Promise<boolean>;
 
   /**
    * Initialize the provider (e.g., establish connection)

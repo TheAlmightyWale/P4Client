@@ -15,6 +15,10 @@ import {
   updateServer,
   removeServer,
   testConnection,
+  login,
+  logout,
+  getSessionStatus,
+  validateSession,
 } from "./Features/Server";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -133,6 +137,23 @@ app.whenReady().then(() => {
 
   ipcMain.handle("server:testConnection", async (_event, p4port: string) => {
     return testConnection(p4port);
+  });
+
+  // Authentication handlers
+  ipcMain.handle("server:login", async (_event, input) => {
+    return login(input);
+  });
+
+  ipcMain.handle("server:logout", async (_event, serverId: string) => {
+    return logout(serverId);
+  });
+
+  ipcMain.handle("server:getSessionStatus", async () => {
+    return getSessionStatus();
+  });
+
+  ipcMain.handle("server:validateSession", async () => {
+    return validateSession();
   });
 
   // Create all windows
