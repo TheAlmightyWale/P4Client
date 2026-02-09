@@ -1,7 +1,6 @@
 import {
   getP4Config,
   setP4Config,
-  useNativeApi,
   resetP4Config,
 } from "../../../../src/Main/Features/P4/config";
 
@@ -14,7 +13,6 @@ describe("P4 Config", () => {
     it("should return default config", () => {
       const config = getP4Config();
 
-      expect(config.useNativeApi).toBe(true);
       expect(config.port).toBeUndefined();
       expect(config.user).toBeUndefined();
       expect(config.client).toBeUndefined();
@@ -31,13 +29,6 @@ describe("P4 Config", () => {
   });
 
   describe("setP4Config", () => {
-    it("should update useNativeApi flag", () => {
-      setP4Config({ useNativeApi: false });
-
-      const config = getP4Config();
-      expect(config.useNativeApi).toBe(false);
-    });
-
     it("should update connection settings", () => {
       setP4Config({
         port: "ssl:perforce.example.com:1666",
@@ -60,7 +51,6 @@ describe("P4 Config", () => {
       const config = getP4Config();
       expect(config.port).toBe("localhost:1666");
       expect(config.user).toBe("admin");
-      expect(config.useNativeApi).toBe(true); // Default preserved
     });
 
     it("should allow overwriting values", () => {
@@ -72,27 +62,9 @@ describe("P4 Config", () => {
     });
   });
 
-  describe("useNativeApi", () => {
-    it("should return true by default", () => {
-      expect(useNativeApi()).toBe(true);
-    });
-
-    it("should return false when set to false", () => {
-      setP4Config({ useNativeApi: false });
-      expect(useNativeApi()).toBe(false);
-    });
-
-    it("should return true when set back to true", () => {
-      setP4Config({ useNativeApi: false });
-      setP4Config({ useNativeApi: true });
-      expect(useNativeApi()).toBe(true);
-    });
-  });
-
   describe("resetP4Config", () => {
     it("should reset to default values", () => {
       setP4Config({
-        useNativeApi: false,
         port: "custom:1666",
         user: "customuser",
       });
@@ -100,7 +72,6 @@ describe("P4 Config", () => {
       resetP4Config();
 
       const config = getP4Config();
-      expect(config.useNativeApi).toBe(true);
       expect(config.port).toBeUndefined();
       expect(config.user).toBeUndefined();
     });

@@ -32,7 +32,7 @@ Renderer (React UI)  ←→  Preload (contextBridge)  ←→  Main (Node.js)
 
 Features live in `src/Main/Features/` with each feature exporting a public API:
 
-- **P4/** — Perforce integration with a **dual-provider pattern**: `ApiProvider` (native p4api bindings) and `CliProvider` (spawns p4 CLI). A factory (`factory.ts`) selects the provider and falls back to CLI if the native API is unavailable. Both implement the `P4Provider` interface.
+- **P4/** — Perforce integration via `CliProvider` (spawns p4 CLI commands). A factory (`factory.ts`) manages the singleton provider instance. The provider implements the `P4Provider` interface.
 - **Server/** — Server CRUD via `electron-store`, authentication (`auth.ts`), and session management (`session.ts`). P4 tickets are stored in p4's own ticket file, not in app storage.
 - **Theme/** — Theme toggle action handler for Zubridge.
 
@@ -58,7 +58,6 @@ P4 operations return `P4Result<T>` with `{ success, data?, error? }` — always 
 - Preload: `.vite/build/preload.cjs` (CommonJS required by Electron)
 - Renderer: `.vite/build/render/index.html`
 
-Native modules (p4api) are unpacked from ASAR in `forge.config.ts`.
 
 ## Testing
 

@@ -10,7 +10,6 @@ export default defineConfig({
         "@zubridge/electron/main",
         "@zubridge/types",
         "zustand",
-        "p4api",
       ],
     },
   },

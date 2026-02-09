@@ -1,8 +1,8 @@
 /**
  * P4 Feature Module
  *
- * Public API for Perforce operations. Uses a provider pattern to support
- * both native API (p4api) and CLI backends with automatic fallback.
+ * Public API for Perforce operations. Uses the CLI provider for all
+ * Perforce interactions.
  */
 
 import { getProvider } from "./factory";

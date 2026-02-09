@@ -9,10 +9,7 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: {
-      // Unpack native modules so they can be loaded at runtime
-      unpack: "**/node_modules/p4api/**",
-    },
+    asar: true,
   },
   rebuildConfig: {},
   makers: [

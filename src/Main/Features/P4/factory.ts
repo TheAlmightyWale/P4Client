@@ -1,14 +1,11 @@
 /**
  * P4 Provider Factory
  *
- * Creates and manages the P4 provider instance based on configuration.
- * Supports automatic fallback from API to CLI if API initialization fails.
+ * Creates and manages the P4 provider instance.
  */
 
-import { useNativeApi } from "./config";
 import type { P4Provider } from "./types";
 import { CliProvider } from "./providers/cli";
-import { ApiProvider } from "./providers/api";
 
 let provider: P4Provider | null = null;
 
@@ -24,18 +21,9 @@ export function getProvider(): P4Provider {
 }
 
 /**
- * Creates a new provider based on configuration.
- * Falls back to CLI if API initialization fails.
+ * Creates a new CLI provider.
  */
 function createProvider(): P4Provider {
-  if (useNativeApi()) {
-    try {
-      return new ApiProvider();
-    } catch (error) {
-      console.warn("Failed to initialize p4api, falling back to CLI:", error);
-      return new CliProvider();
-    }
-  }
   return new CliProvider();
 }
 

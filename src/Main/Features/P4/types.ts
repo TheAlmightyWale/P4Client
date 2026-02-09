@@ -1,7 +1,7 @@
 /**
  * P4 Provider Interface
  *
- * Defines the contract that both CLI and API providers must implement.
+ * Defines the contract that the P4 provider must implement.
  */
 
 import type {
@@ -42,7 +42,7 @@ export interface P4TicketInfo {
 }
 
 /**
- * Interface that both CLI and API providers must implement
+ * Interface that the P4 provider must implement
  */
 export interface P4Provider {
   /**

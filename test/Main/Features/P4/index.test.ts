@@ -2,7 +2,6 @@ import {
   getSubmittedChanges,
   getPendingChanges,
   getCurrentUser,
-  setP4Config,
   resetP4Config,
 } from "../../../../src/Main/Features/P4/index";
 import { resetProvider } from "../../../../src/Main/Features/P4/factory";
@@ -18,9 +17,7 @@ const mockExecuteP4Command = executor.executeP4Command as jest.MockedFunction<
 describe("P4 Feature", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
-    // Reset to CLI provider for tests
     resetP4Config();
-    setP4Config({ useNativeApi: false });
     await resetProvider();
   });
 
