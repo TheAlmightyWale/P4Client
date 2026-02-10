@@ -39,6 +39,7 @@ describe("Server Discovery", () => {
   const mockProvider: jest.Mocked<P4Provider> = {
     login: jest.fn(),
     logout: jest.fn(),
+    getSet: jest.fn(),
     getTickets: jest.fn(),
     hasValidTicket: jest.fn(),
     getSubmittedChanges: jest.fn(),
@@ -72,6 +73,8 @@ describe("Server Discovery", () => {
     delete process.env.P4USER;
     delete process.env.P4CLIENT;
     mockedGetProvider.mockReturnValue(mockProvider);
+    // Default: p4 set returns empty
+    mockProvider.getSet.mockResolvedValue({ success: true, data: {} });
   });
 
   describe("extractServerName", () => {
@@ -134,8 +137,8 @@ describe("Server Discovery", () => {
   });
 
   describe("getEnvironmentConfig", () => {
-    it("should use default P4PORT of 1666 when not set in environment", () => {
-      const result = getEnvironmentConfig();
+    it("should use default P4PORT of 1666 when not set in environment or p4 set", async () => {
+      const result = await getEnvironmentConfig();
 
       expect(result).not.toBeNull();
       expect(result?.p4port).toBe("1666");
@@ -143,10 +146,10 @@ describe("Server Discovery", () => {
       expect(result?.source).toBe("environment");
     });
 
-    it("should return DiscoveredServer when P4PORT is set", () => {
+    it("should return DiscoveredServer when P4PORT is set in environment", async () => {
       process.env.P4PORT = "ssl:perforce.example.com:1666";
 
-      const result = getEnvironmentConfig();
+      const result = await getEnvironmentConfig();
 
       expect(result).not.toBeNull();
       expect(result?.p4port).toBe("ssl:perforce.example.com:1666");
@@ -154,21 +157,70 @@ describe("Server Discovery", () => {
       expect(result?.source).toBe("environment");
     });
 
-    it("should include P4USER when available", () => {
+    it("should include P4USER when available in environment", async () => {
       process.env.P4PORT = "ssl:perforce.example.com:1666";
       process.env.P4USER = "testuser";
 
-      const result = getEnvironmentConfig();
+      const result = await getEnvironmentConfig();
 
       expect(result?.username).toBe("testuser");
     });
 
-    it("should not include username when P4USER is not set", () => {
+    it("should not include username when P4USER is not set anywhere", async () => {
       process.env.P4PORT = "ssl:perforce.example.com:1666";
 
-      const result = getEnvironmentConfig();
+      const result = await getEnvironmentConfig();
 
       expect(result?.username).toBeUndefined();
+    });
+
+    it("should fall back to p4 set for P4PORT when not in environment", async () => {
+      mockProvider.getSet.mockResolvedValue({
+        success: true,
+        data: { P4PORT: "ssl:p4set-server:1666" },
+      });
+
+      const result = await getEnvironmentConfig();
+
+      expect(result?.p4port).toBe("ssl:p4set-server:1666");
+      expect(result?.name).toBe("p4set-server");
+    });
+
+    it("should fall back to p4 set for P4USER when not in environment", async () => {
+      process.env.P4PORT = "ssl:perforce.example.com:1666";
+      mockProvider.getSet.mockResolvedValue({
+        success: true,
+        data: { P4USER: "p4setuser" },
+      });
+
+      const result = await getEnvironmentConfig();
+
+      expect(result?.username).toBe("p4setuser");
+    });
+
+    it("should prefer environment variables over p4 set", async () => {
+      process.env.P4PORT = "ssl:env-server:1666";
+      process.env.P4USER = "envuser";
+      mockProvider.getSet.mockResolvedValue({
+        success: true,
+        data: { P4PORT: "ssl:p4set-server:1666", P4USER: "p4setuser" },
+      });
+
+      const result = await getEnvironmentConfig();
+
+      expect(result?.p4port).toBe("ssl:env-server:1666");
+      expect(result?.username).toBe("envuser");
+      // Should not even call p4 set when both env vars are present
+      expect(mockProvider.getSet).not.toHaveBeenCalled();
+    });
+
+    it("should handle p4 set failure gracefully", async () => {
+      mockProvider.getSet.mockRejectedValue(new Error("p4 not found"));
+
+      const result = await getEnvironmentConfig();
+
+      expect(result).not.toBeNull();
+      expect(result?.p4port).toBe("1666");
     });
   });
 

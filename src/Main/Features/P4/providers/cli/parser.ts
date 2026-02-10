@@ -151,6 +151,46 @@ export function parseInfoOutput(output: string): ServerInfo {
 }
 
 /**
+ * Parses p4 set output into a map of variable names to values
+ *
+ * Example output:
+ * P4CLIENT=my-workspace (set)
+ * P4PORT=ssl:perforce.example.com:1666 (set -s)
+ * P4USER=admin (set)
+ *
+ * Lines follow the pattern: VARNAME=VALUE (source)
+ * The (source) suffix is optional.
+ */
+export function parseSetOutput(output: string): Record<string, string> {
+  const variables: Record<string, string> = {};
+  const lines = output.split("\n");
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.includes("=")) {
+      continue;
+    }
+
+    const eqIndex = trimmed.indexOf("=");
+    const name = trimmed.substring(0, eqIndex);
+
+    // Value may be followed by " (source)" — strip it
+    let rest = trimmed.substring(eqIndex + 1);
+    const sourceMatch = rest.match(/\s+\([^)]+\)\s*$/);
+    if (sourceMatch) {
+      rest = rest.substring(0, rest.length - sourceMatch[0].length);
+    }
+
+    const value = rest.trim();
+    if (name && value) {
+      variables[name] = value;
+    }
+  }
+
+  return variables;
+}
+
+/**
  * Parses p4 -ztag tickets output
  *
  * Example ztag output:

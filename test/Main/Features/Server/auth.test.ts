@@ -50,6 +50,7 @@ describe("Auth Module", () => {
   const mockProvider: jest.Mocked<P4Provider> = {
     login: jest.fn(),
     logout: jest.fn(),
+    getSet: jest.fn(),
     getTickets: jest.fn(),
     hasValidTicket: jest.fn(),
     getSubmittedChanges: jest.fn(),

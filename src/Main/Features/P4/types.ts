@@ -85,6 +85,12 @@ export interface P4Provider {
   logout(p4port: string, username: string): Promise<P4Result<void>>;
 
   /**
+   * Get P4 configuration variables from `p4 set`
+   * Returns a map of variable names to their values
+   */
+  getSet(): Promise<P4Result<Record<string, string>>>;
+
+  /**
    * Get all valid tickets from the ticket file
    */
   getTickets(): Promise<P4Result<P4TicketInfo[]>>;

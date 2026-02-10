@@ -86,18 +86,42 @@ export function extractServerName(p4port: string): string {
 }
 
 /**
- * Reads P4 environment variables
+ * Reads P4 environment variables, falling back to `p4 set` output
  *
- * @returns DiscoveredServer if P4PORT is set, null otherwise
+ * Checks process.env first, then `p4 set` for P4PORT and P4USER.
+ * Defaults P4PORT to "1666" if neither source provides it.
+ *
+ * @returns DiscoveredServer with the best available P4PORT
  */
-export function getEnvironmentConfig(): DiscoveredServer | null {
-  const p4port = process.env.P4PORT ?? "1666";
+export async function getEnvironmentConfig(): Promise<DiscoveredServer | null> {
+  let p4port = process.env.P4PORT;
+  let p4user = process.env.P4USER;
+
+  // Try p4 set for any variables not found in the environment
+  if (!p4port || !p4user) {
+    try {
+      const provider = getProvider();
+      const result = await provider.getSet();
+      if (result.success && result.data) {
+        if (!p4port && result.data.P4PORT) {
+          p4port = result.data.P4PORT;
+        }
+        if (!p4user && result.data.P4USER) {
+          p4user = result.data.P4USER;
+        }
+      }
+    } catch {
+      // p4 set failed — continue with what we have
+    }
+  }
+
+  p4port = p4port ?? "1666";
 
   return {
     p4port,
     name: extractServerName(p4port),
     source: "environment",
-    username: process.env.P4USER,
+    username: p4user,
   };
 }
 
@@ -216,7 +240,7 @@ export async function discoverServers(): Promise<DiscoveryResult> {
 
   // Discover from environment
   try {
-    const envServer = getEnvironmentConfig();
+    const envServer = await getEnvironmentConfig();
     if (envServer) {
       discoveredServers.push(envServer);
     }

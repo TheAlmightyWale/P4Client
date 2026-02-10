@@ -4,6 +4,7 @@ import {
   parseChangesOutput,
   parseP4Date,
   parseUserOutput,
+  parseSetOutput,
 } from "../../../../src/Main/Features/P4/providers/cli/parser";
 
 describe("P4 Ztag Parser", () => {
@@ -275,6 +276,78 @@ More random text`;
 
       const result = parseUserOutput(output);
       expect(result).toBeNull();
+    });
+  });
+
+  describe("parseSetOutput", () => {
+    it("should parse p4 set output with source annotations", () => {
+      const output = `P4CLIENT=my-workspace (set)
+P4PORT=ssl:perforce.example.com:1666 (set)
+P4USER=admin (set)`;
+
+      const result = parseSetOutput(output);
+
+      expect(result).toEqual({
+        P4CLIENT: "my-workspace",
+        P4PORT: "ssl:perforce.example.com:1666",
+        P4USER: "admin",
+      });
+    });
+
+    it("should handle different source types", () => {
+      const output = `P4PORT=ssl:perforce:1666 (set -s)
+P4USER=admin (config)
+P4EDITOR=notepad (set)`;
+
+      const result = parseSetOutput(output);
+
+      expect(result.P4PORT).toBe("ssl:perforce:1666");
+      expect(result.P4USER).toBe("admin");
+      expect(result.P4EDITOR).toBe("notepad");
+    });
+
+    it("should handle values with spaces in paths", () => {
+      const output = `P4EDITOR=C:\\Program Files\\editor\\edit.exe (set)`;
+
+      const result = parseSetOutput(output);
+
+      expect(result.P4EDITOR).toBe("C:\\Program Files\\editor\\edit.exe");
+    });
+
+    it("should handle empty output", () => {
+      const result = parseSetOutput("");
+      expect(result).toEqual({});
+    });
+
+    it("should skip blank lines", () => {
+      const output = `P4PORT=ssl:perforce:1666 (set)
+
+P4USER=admin (set)
+`;
+
+      const result = parseSetOutput(output);
+
+      expect(Object.keys(result)).toHaveLength(2);
+      expect(result.P4PORT).toBe("ssl:perforce:1666");
+      expect(result.P4USER).toBe("admin");
+    });
+
+    it("should handle lines without source annotation", () => {
+      const output = `P4PORT=ssl:perforce:1666`;
+
+      const result = parseSetOutput(output);
+
+      expect(result.P4PORT).toBe("ssl:perforce:1666");
+    });
+
+    it("should trim whitespace from values", () => {
+      const output = `P4CLIENT=my-workspace   (set)
+P4PORT=  ssl:perforce:1666   `;
+
+      const result = parseSetOutput(output);
+
+      expect(result.P4CLIENT).toBe("my-workspace");
+      expect(result.P4PORT).toBe("ssl:perforce:1666");
     });
   });
 

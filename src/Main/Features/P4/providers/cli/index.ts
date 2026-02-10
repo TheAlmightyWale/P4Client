@@ -22,6 +22,7 @@ import {
   parseChangesOutput,
   parseUserOutput,
   parseInfoOutput,
+  parseSetOutput,
   parseTicketsOutput,
 } from "./parser";
 
@@ -154,6 +155,22 @@ export class CliProvider implements P4Provider {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Logout failed",
+      };
+    }
+  }
+
+  async getSet(): Promise<P4Result<Record<string, string>>> {
+    try {
+      const { stdout } = await executeP4Command("set");
+      const variables = parseSetOutput(stdout);
+      return { success: true, data: variables };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to get p4 set variables",
       };
     }
   }
