@@ -1,6 +1,4 @@
 import { executeP4Command } from "../../../../src/Main/Features/P4/providers/cli/executor";
-import { exec } from "child_process";
-import { promisify } from "util";
 
 // Mock child_process
 jest.mock("child_process", () => ({
@@ -8,19 +6,20 @@ jest.mock("child_process", () => ({
   spawn: jest.fn(),
 }));
 
-jest.mock("util", () => ({
-  promisify: jest.fn(),
-}));
+jest.mock("util", () => {
+  const mockFn = jest.fn();
+  return {
+    promisify: jest.fn(() => mockFn),
+    _mockExecAsync: mockFn,
+  };
+});
 
-const mockPromisify = promisify as jest.MockedFunction<typeof promisify>;
+const mockExecAsync: jest.Mock =
+  jest.requireMock<{ _mockExecAsync: jest.Mock }>("util")._mockExecAsync;
 
 describe("P4 CLI Executor", () => {
-  let mockExecAsync: jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    mockExecAsync = jest.fn();
-    mockPromisify.mockReturnValue(mockExecAsync);
   });
 
   it("should execute p4 command with -ztag flag and return output", async () => {
