@@ -6,11 +6,10 @@
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "args" : ["."],
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron-forge.cmd",
+      "args": ["start", "--inspect-electron"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/.vite/build/**/*.js"],
       "outputCapture": "std"
     }
   ]
