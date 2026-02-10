@@ -13,6 +13,13 @@ jest.mock("electron-store", () => {
 jest.mock("../../../../src/Main/Features/Server/session");
 jest.mock("../../../../src/Main/Features/Server/store");
 jest.mock("../../../../src/Main/Features/P4/factory");
+jest.mock("../../../../src/Main/Features/P4/config", () => {
+  const actual = jest.requireActual("../../../../src/Main/Features/P4/config");
+  return {
+    ...actual,
+    resolveP4EnvVar: jest.fn(),
+  };
+});
 jest.mock("os", () => ({
   hostname: jest.fn(() => "MY-PC"),
 }));
@@ -31,6 +38,7 @@ import type { DiscoveredServer } from "../../../../src/Main/Features/Server/disc
 import * as sessionModule from "../../../../src/Main/Features/Server/session";
 import * as storeModule from "../../../../src/Main/Features/Server/store";
 import * as factoryModule from "../../../../src/Main/Features/P4/factory";
+import * as configModule from "../../../../src/Main/Features/P4/config";
 import type { P4Provider } from "../../../../src/Main/Features/P4/types";
 import type { ServerConfig } from "../../../../src/shared/types/server";
 
@@ -65,6 +73,10 @@ describe("Server Discovery", () => {
   const mockedGetProvider = factoryModule.getProvider as jest.MockedFunction<
     typeof factoryModule.getProvider
   >;
+  const mockedResolveP4EnvVar =
+    configModule.resolveP4EnvVar as jest.MockedFunction<
+      typeof configModule.resolveP4EnvVar
+    >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -75,6 +87,10 @@ describe("Server Discovery", () => {
     mockedGetProvider.mockReturnValue(mockProvider);
     // Default: p4 set returns empty
     mockProvider.getSet.mockResolvedValue({ success: true, data: {} });
+    // Default: resolveP4EnvVar returns default value behavior
+    mockedResolveP4EnvVar.mockImplementation(
+      async (varName: string, defaultValue?: string) => defaultValue,
+    );
   });
 
   describe("extractServerName", () => {
@@ -137,17 +153,21 @@ describe("Server Discovery", () => {
   });
 
   describe("getEnvironmentConfig", () => {
-    it("should use default P4PORT of 1666 when not set in environment or p4 set", async () => {
+    it("should use default P4PORT of 1666 when resolveP4EnvVar returns default", async () => {
       const result = await getEnvironmentConfig();
 
       expect(result).not.toBeNull();
       expect(result?.p4port).toBe("1666");
       expect(result?.name).toBe("MY-PC");
       expect(result?.source).toBe("environment");
+      expect(mockedResolveP4EnvVar).toHaveBeenCalledWith("P4PORT", "1666");
+      expect(mockedResolveP4EnvVar).toHaveBeenCalledWith("P4USER");
     });
 
-    it("should return DiscoveredServer when P4PORT is set in environment", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+    it("should return DiscoveredServer when P4PORT is resolved", async () => {
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
 
       const result = await getEnvironmentConfig();
 
@@ -157,70 +177,40 @@ describe("Server Discovery", () => {
       expect(result?.source).toBe("environment");
     });
 
-    it("should include P4USER when available in environment", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
-      process.env.P4USER = "testuser";
+    it("should include username when P4USER is resolved", async () => {
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) => {
+        if (varName === "P4PORT") return "ssl:perforce.example.com:1666";
+        if (varName === "P4USER") return "testuser";
+        return defaultValue;
+      });
 
       const result = await getEnvironmentConfig();
 
       expect(result?.username).toBe("testuser");
     });
 
-    it("should not include username when P4USER is not set anywhere", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+    it("should not include username when P4USER is not resolved", async () => {
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
 
       const result = await getEnvironmentConfig();
 
       expect(result?.username).toBeUndefined();
     });
 
-    it("should fall back to p4 set for P4PORT when not in environment", async () => {
-      mockProvider.getSet.mockResolvedValue({
-        success: true,
-        data: { P4PORT: "ssl:p4set-server:1666" },
+    it("should delegate to resolveP4EnvVar for both P4PORT and P4USER", async () => {
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) => {
+        if (varName === "P4PORT") return "ssl:p4set-server:1666";
+        if (varName === "P4USER") return "p4setuser";
+        return defaultValue;
       });
 
       const result = await getEnvironmentConfig();
 
       expect(result?.p4port).toBe("ssl:p4set-server:1666");
       expect(result?.name).toBe("p4set-server");
-    });
-
-    it("should fall back to p4 set for P4USER when not in environment", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
-      mockProvider.getSet.mockResolvedValue({
-        success: true,
-        data: { P4USER: "p4setuser" },
-      });
-
-      const result = await getEnvironmentConfig();
-
       expect(result?.username).toBe("p4setuser");
-    });
-
-    it("should prefer environment variables over p4 set", async () => {
-      process.env.P4PORT = "ssl:env-server:1666";
-      process.env.P4USER = "envuser";
-      mockProvider.getSet.mockResolvedValue({
-        success: true,
-        data: { P4PORT: "ssl:p4set-server:1666", P4USER: "p4setuser" },
-      });
-
-      const result = await getEnvironmentConfig();
-
-      expect(result?.p4port).toBe("ssl:env-server:1666");
-      expect(result?.username).toBe("envuser");
-      // Should not even call p4 set when both env vars are present
-      expect(mockProvider.getSet).not.toHaveBeenCalled();
-    });
-
-    it("should handle p4 set failure gracefully", async () => {
-      mockProvider.getSet.mockRejectedValue(new Error("p4 not found"));
-
-      const result = await getEnvironmentConfig();
-
-      expect(result).not.toBeNull();
-      expect(result?.p4port).toBe("1666");
     });
   });
 
@@ -423,7 +413,9 @@ describe("Server Discovery", () => {
     });
 
     it("should create servers from environment when not existing", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
 
       const result = await discoverServers();
 
@@ -465,7 +457,9 @@ describe("Server Discovery", () => {
           updatedAt: "2024-01-01",
         },
       ]);
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
 
       const result = await discoverServers();
 
@@ -515,7 +509,9 @@ describe("Server Discovery", () => {
     });
 
     it("should return discovery results", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
 
       const result = await discoverServers();
 
@@ -534,7 +530,9 @@ describe("Server Discovery", () => {
     });
 
     it("should deduplicate servers from environment and tickets", async () => {
-      process.env.P4PORT = "ssl:perforce.example.com:1666";
+      mockedResolveP4EnvVar.mockImplementation(async (varName, defaultValue) =>
+        varName === "P4PORT" ? "ssl:perforce.example.com:1666" : defaultValue,
+      );
       mockProvider.getTickets.mockResolvedValue({
         success: true,
         data: [

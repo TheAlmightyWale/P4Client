@@ -17,7 +17,7 @@ import type {
 export * from "../../../shared/types/p4";
 
 // Re-export configuration functions
-export { getP4Config, setP4Config, resetP4Config } from "./config";
+export { getP4Config, setP4Config, resetP4Config, resolveP4EnvVar } from "./config";
 
 // Re-export factory functions for advanced use
 export { resetProvider } from "./factory";

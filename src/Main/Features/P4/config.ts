@@ -4,6 +4,8 @@
  * Manages configuration for P4 connection settings.
  */
 
+import { getProvider } from "./factory";
+
 export interface P4Config {
   /**
    * P4 connection settings
@@ -41,4 +43,40 @@ export function setP4Config(config: Partial<P4Config>): void {
  */
 export function resetP4Config(): void {
   currentConfig = { ...defaultConfig };
+}
+
+/**
+ * Resolves a P4 environment variable by checking multiple sources in order:
+ *
+ * 1. Process environment (`process.env[varName]`)
+ * 2. `p4 set` output (registry/config file values)
+ * 3. Provided default value
+ *
+ * @param varName - The P4 variable name (e.g., "P4PORT", "P4USER", "P4CLIENT")
+ * @param defaultValue - Optional fallback if not found in any source
+ * @returns The resolved value, or undefined if not found anywhere
+ */
+export async function resolveP4EnvVar(
+  varName: string,
+  defaultValue?: string,
+): Promise<string | undefined> {
+  // 1. Check process environment
+  const envValue = process.env[varName];
+  if (envValue) {
+    return envValue;
+  }
+
+  // 2. Check p4 set output
+  try {
+    const provider = getProvider();
+    const result = await provider.getSet();
+    if (result.success && result.data?.[varName]) {
+      return result.data[varName];
+    }
+  } catch {
+    // p4 set failed — continue with default
+  }
+
+  // 3. Fall back to default
+  return defaultValue;
 }

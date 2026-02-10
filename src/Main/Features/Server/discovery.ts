@@ -11,6 +11,7 @@ import { hostname as osHostname } from "os";
 import type { ServerConfig } from "../../../shared/types/server";
 import { getAllServers, saveServer } from "./store";
 import { getActiveSession, saveSession } from "./session";
+import { resolveP4EnvVar } from "../P4/config";
 import { getProvider } from "../P4/factory";
 
 /**
@@ -88,34 +89,14 @@ export function extractServerName(p4port: string): string {
 /**
  * Reads P4 environment variables, falling back to `p4 set` output
  *
- * Checks process.env first, then `p4 set` for P4PORT and P4USER.
- * Defaults P4PORT to "1666" if neither source provides it.
+ * Uses resolveP4EnvVar to check process.env first, then `p4 set` for
+ * P4PORT and P4USER. Defaults P4PORT to "1666" if neither source provides it.
  *
  * @returns DiscoveredServer with the best available P4PORT
  */
 export async function getEnvironmentConfig(): Promise<DiscoveredServer | null> {
-  let p4port = process.env.P4PORT;
-  let p4user = process.env.P4USER;
-
-  // Try p4 set for any variables not found in the environment
-  if (!p4port || !p4user) {
-    try {
-      const provider = getProvider();
-      const result = await provider.getSet();
-      if (result.success && result.data) {
-        if (!p4port && result.data.P4PORT) {
-          p4port = result.data.P4PORT;
-        }
-        if (!p4user && result.data.P4USER) {
-          p4user = result.data.P4USER;
-        }
-      }
-    } catch {
-      // p4 set failed — continue with what we have
-    }
-  }
-
-  p4port = p4port ?? "1666";
+  const p4port = (await resolveP4EnvVar("P4PORT", "1666"))!;
+  const p4user = await resolveP4EnvVar("P4USER");
 
   return {
     p4port,
