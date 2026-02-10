@@ -19,6 +19,7 @@ import {
   logout,
   getSessionStatus,
   validateSession,
+  discoverServers,
 } from "./Features/Server";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -83,12 +84,41 @@ const SetupEventHandlers = (bridge: ReturnType<typeof createBridge>) => {
   });
 };
 
+/**
+ * Runs server discovery and logs results
+ * Wrapped in its own function to keep app.whenReady() clean
+ */
+async function runServerDiscovery(): Promise<void> {
+  try {
+    const discoveryResult = await discoverServers();
+    console.log(`Finished server discovery`);
+
+    if (discoveryResult.serversCreated.length > 0) {
+      console.log(
+        `Discovered ${discoveryResult.serversCreated.length} new server(s)`,
+      );
+    }
+    if (discoveryResult.sessionsRecovered > 0) {
+      console.log(`Recovered ${discoveryResult.sessionsRecovered} session(s)`);
+    }
+    if (discoveryResult.errors.length > 0) {
+      console.warn("Discovery errors:", discoveryResult.errors);
+    }
+  } catch (error) {
+    console.error("Server discovery failed:", error);
+    // Continue startup even if discovery fails
+  }
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const store = createStore();
   const bridge = createBridge(store);
+
+  // Discover servers from environment and tickets
+  await runServerDiscovery();
 
   // Handle window info requests
   ipcMain.handle("get-window-info", (event) => {

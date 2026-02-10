@@ -19,6 +19,9 @@ export { getAllServers, getServerById };
 // Re-export auth functions
 export { login, logout, getSessionStatus, validateSession } from "./auth";
 
+// Re-export discovery functions
+export { discoverServers } from "./discovery";
+
 /**
  * Add a new server configuration
  */
@@ -69,7 +72,7 @@ export function removeServer(id: string): boolean {
  * Test connection to a Perforce server using p4 info
  */
 export async function testConnection(
-  p4port: string
+  p4port: string,
 ): Promise<ConnectionTestResult> {
   const startTime = Date.now();
 
