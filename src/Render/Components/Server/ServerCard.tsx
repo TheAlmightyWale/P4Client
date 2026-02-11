@@ -62,16 +62,6 @@ export const ServerCard: React.FC<ServerCardProps> = ({
 
   return (
     <div className="relative p-4 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
-      {/* Connected indicator */}
-      {isActiveServer && (
-        <div className="absolute top-2 right-2">
-          <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--color-success)]/20 text-[var(--color-success)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
-            Connected
-          </span>
-        </div>
-      )}
-
       <div className="flex items-start justify-between mb-2">
         <div>
           <h3 className="font-semibold text-[var(--color-text-primary)]">
