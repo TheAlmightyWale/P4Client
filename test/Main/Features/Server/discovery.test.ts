@@ -41,6 +41,7 @@ import * as factoryModule from "../../../../src/Main/Features/P4/factory";
 import * as configModule from "../../../../src/Main/Features/P4/config";
 import type { P4Provider } from "../../../../src/Main/Features/P4/types";
 import type { ServerConfig } from "../../../../src/shared/types/server";
+import * as os from "os";
 
 describe("Server Discovery", () => {
   // Mock provider
@@ -146,8 +147,7 @@ describe("Server Discovery", () => {
     });
 
     it("should fall back to localhost when os.hostname() returns empty string", () => {
-      const os = require("os");
-      os.hostname.mockReturnValueOnce("");
+      (os.hostname as jest.Mock).mockReturnValueOnce("");
       expect(extractServerName("1666")).toBe("localhost");
     });
   });

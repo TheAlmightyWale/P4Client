@@ -1,4 +1,4 @@
-import clsx from "clsx";
+import { clsx } from "clsx";
 import type React from "react";
 import type { ButtonHTMLAttributes } from "react";
 

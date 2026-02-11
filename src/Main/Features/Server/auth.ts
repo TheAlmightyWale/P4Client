@@ -92,7 +92,7 @@ export async function logout(serverId: string): Promise<LogoutResult> {
     clearSession();
 
     return { success: true };
-  } catch (error) {
+  } catch {
     // Clear session even if logout command fails
     clearSession();
     return {
