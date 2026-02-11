@@ -17,7 +17,7 @@ type AppView = "servers" | "changes";
 function App() {
   const store = useStore();
   const dispatch = useDispatch();
-  const [currentView, setCurrentView] = useState<AppView>("servers");
+  const [currentView, setCurrentView] = useState<AppView>("changes");
 
   // Get state values
   const theme = (store?.theme || "dark") as "dark" | "light";
