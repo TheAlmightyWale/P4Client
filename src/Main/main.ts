@@ -37,12 +37,19 @@ const createMainWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    show: false,
+    backgroundColor: "#0f172a",
     webPreferences: {
       //TODO make True and fix
       sandbox: false,
       preload: path.join(__dirname, "preload.cjs"),
     },
   }) as ZubridgeWindow;
+
+  // Show window once the first non-empty paint completes
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+  });
 
   // and load the index.html of the app.
   const isDev = process.env.NODE_ENV === "development";
@@ -117,10 +124,7 @@ app.whenReady().then(async () => {
   const store = createStore();
   const bridge = createBridge(store);
 
-  // Discover servers from environment and tickets
-  await runServerDiscovery();
-
-  // Handle window info requests
+  // Register IPC handlers before window creation so they're ready when renderer calls them
   ipcMain.handle("get-window-info", (event) => {
     const sender = event.sender;
     const window = BrowserWindow.fromWebContents(sender) as ZubridgeWindow;
@@ -154,15 +158,21 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("server:add", async (_event, input) => {
-    return addServer(input);
+    const result = addServer(input);
+    store.setState({ servers: getAllServers() });
+    return result;
   });
 
   ipcMain.handle("server:update", async (_event, input) => {
-    return updateServer(input);
+    const result = updateServer(input);
+    store.setState({ servers: getAllServers() });
+    return result;
   });
 
   ipcMain.handle("server:remove", async (_event, id: string) => {
-    return removeServer(id);
+    const result = removeServer(id);
+    store.setState({ servers: getAllServers() });
+    return result;
   });
 
   ipcMain.handle("server:testConnection", async (_event, p4port: string) => {
@@ -171,11 +181,21 @@ app.whenReady().then(async () => {
 
   // Authentication handlers
   ipcMain.handle("server:login", async (_event, input) => {
-    return login(input);
+    const result = await login(input);
+    store.setState({
+      servers: getAllServers(),
+      sessionStatus: getSessionStatus(),
+    });
+    return result;
   });
 
   ipcMain.handle("server:logout", async (_event, serverId: string) => {
-    return logout(serverId);
+    const result = await logout(serverId);
+    store.setState({
+      servers: getAllServers(),
+      sessionStatus: getSessionStatus(),
+    });
+    return result;
   });
 
   ipcMain.handle("server:getSessionStatus", async () => {
@@ -186,8 +206,22 @@ app.whenReady().then(async () => {
     return validateSession();
   });
 
-  // Create all windows
+  // Create window immediately — user sees skeleton UI right away
   createAndSubscribeWindows(bridge);
-
   SetupEventHandlers(bridge);
+
+  // Push existing data to store so renderer has it as soon as Zubridge syncs
+  store.setState({
+    servers: getAllServers(),
+    sessionStatus: getSessionStatus(),
+  });
+
+  // Discovery runs in background AFTER window is visible — may find new servers
+  await runServerDiscovery();
+
+  // Push updated data after discovery (may include newly discovered servers/sessions)
+  store.setState({
+    servers: getAllServers(),
+    sessionStatus: getSessionStatus(),
+  });
 });

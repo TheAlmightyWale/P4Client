@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createUseStore } from "@zubridge/electron";
 import type {
   ServerConfig,
   CreateServerInput,
@@ -8,6 +9,12 @@ import type {
   LoginResult,
   LogoutResult,
 } from "../../shared/types/server";
+
+const useStore = createUseStore();
+
+// Stable defaults to avoid re-render loops in useEffect dependencies
+const EMPTY_SERVERS: ServerConfig[] = [];
+const DEFAULT_SESSION: SessionStatus = { isLoggedIn: false };
 
 interface UseServersReturn {
   servers: ServerConfig[];
@@ -29,12 +36,31 @@ interface UseServersReturn {
 }
 
 export function useServers(): UseServersReturn {
-  const [servers, setServers] = useState<ServerConfig[]>([]);
-  const [loading, setLoading] = useState(true);
+  const storeState = useStore();
+
+  // Read initial data from Zubridge store (synced from main process)
+  const storeServers =
+    (storeState?.servers as ServerConfig[]) || EMPTY_SERVERS;
+  const storeSession =
+    (storeState?.sessionStatus as SessionStatus) || DEFAULT_SESSION;
+
+  const [servers, setServers] = useState<ServerConfig[]>(storeServers);
+  const [loading, setLoading] = useState(storeServers.length === 0);
   const [error, setError] = useState<string | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>({
-    isLoggedIn: false,
-  });
+  const [sessionStatus, setSessionStatus] =
+    useState<SessionStatus>(storeSession);
+
+  // Sync from store when it updates (e.g., after discovery or mutations)
+  useEffect(() => {
+    if (storeServers.length > 0) {
+      setServers(storeServers);
+      setLoading(false);
+    }
+  }, [storeServers]);
+
+  useEffect(() => {
+    setSessionStatus(storeSession);
+  }, [storeSession]);
 
   const fetchServers = useCallback(async () => {
     setLoading(true);
@@ -58,11 +84,6 @@ export function useServers(): UseServersReturn {
       setSessionStatus({ isLoggedIn: false });
     }
   }, []);
-
-  useEffect(() => {
-    fetchServers();
-    refreshSession();
-  }, [fetchServers, refreshSession]);
 
   const addServer = useCallback(async (input: CreateServerInput) => {
     const newServer = await window.serverAPI.addServer(input);
