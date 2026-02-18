@@ -27,6 +27,18 @@ export interface GetSubmittedChangesOptions {
 }
 
 /**
+ * Detailed pending changelist with file lists
+ */
+export interface PendingChangelistDetail {
+  id: number;
+  description: string;
+  date?: Date | string;
+  status: "pending";
+  openedFiles: string[];
+  shelvedFiles: string[];
+}
+
+/**
  * Options for fetching pending changes
  */
 export interface GetPendingChangesOptions {
@@ -54,6 +66,7 @@ export interface P4API {
     options?: GetPendingChangesOptions
   ) => Promise<P4Result<ChangelistInfo[]>>;
   getCurrentUser: () => Promise<P4Result<string>>;
+  getPendingChangesDetailed: () => Promise<P4Result<PendingChangelistDetail[]>>;
 }
 
 // Extend Window interface for p4API

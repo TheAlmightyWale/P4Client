@@ -2,6 +2,7 @@ import {
   getSubmittedChanges,
   getPendingChanges,
   getCurrentUser,
+  getPendingChangesDetailed,
   resetP4Config,
 } from "../../../../src/Main/Features/P4/index";
 import { resetProvider } from "../../../../src/Main/Features/P4/factory";
@@ -223,6 +224,130 @@ describe("P4 Feature", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("P4 not configured");
+    });
+  });
+
+  describe("getPendingChangesDetailed", () => {
+    it("should merge pending CLs with opened and shelved files", async () => {
+      // Call 1: getCurrentUser -> user -o
+      mockExecuteP4Command
+        .mockResolvedValueOnce({
+          stdout: "... User jsmith\n... Email jsmith@example.com",
+          stderr: "",
+        })
+        // Call 2: changes -s pending
+        .mockResolvedValueOnce({
+          stdout: `... change 100
+... time 1705334400
+... user jsmith
+... client ws
+... status pending
+... desc Feature work`,
+          stderr: "",
+        })
+        // Call 3: opened -u jsmith
+        .mockResolvedValueOnce({
+          stdout: `... depotFile //depot/main/foo.cpp
+... rev 3
+... change 100
+... action edit
+
+... depotFile //depot/main/bar.cpp
+... rev 1
+... change 100
+... action add`,
+          stderr: "",
+        })
+        // Call 4: describe -S 100
+        .mockResolvedValueOnce({
+          stdout: `... change 100
+... depotFile0 //depot/main/shelved.cpp`,
+          stderr: "",
+        });
+
+      const result = await getPendingChangesDetailed();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data![0].id).toBe(100);
+      expect(result.data![0].description).toBe("Feature work");
+      expect(result.data![0].openedFiles).toEqual([
+        "//depot/main/foo.cpp",
+        "//depot/main/bar.cpp",
+      ]);
+      expect(result.data![0].shelvedFiles).toEqual([
+        "//depot/main/shelved.cpp",
+      ]);
+    });
+
+    it("should include default changelist when it has files", async () => {
+      mockExecuteP4Command
+        .mockResolvedValueOnce({
+          stdout: "... User jsmith\n... Email jsmith@example.com",
+          stderr: "",
+        })
+        // No numbered pending CLs
+        .mockResolvedValueOnce({ stdout: "", stderr: "" })
+        // Opened files in default CL
+        .mockResolvedValueOnce({
+          stdout: `... depotFile //depot/main/default_file.cpp
+... rev 1
+... change default
+... action edit`,
+          stderr: "",
+        });
+
+      const result = await getPendingChangesDetailed();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data![0].id).toBe(0);
+      expect(result.data![0].description).toBe("Default Changelist");
+      expect(result.data![0].openedFiles).toEqual([
+        "//depot/main/default_file.cpp",
+      ]);
+    });
+
+    it("should return empty array when no pending changes", async () => {
+      mockExecuteP4Command
+        .mockResolvedValueOnce({
+          stdout: "... User jsmith\n... Email jsmith@example.com",
+          stderr: "",
+        })
+        .mockResolvedValueOnce({ stdout: "", stderr: "" })
+        .mockResolvedValueOnce({ stdout: "", stderr: "" });
+
+      const result = await getPendingChangesDetailed();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(0);
+    });
+
+    it("should handle error when user cannot be determined", async () => {
+      mockExecuteP4Command.mockResolvedValueOnce({
+        stdout: "Invalid output",
+        stderr: "",
+      });
+
+      const result = await getPendingChangesDetailed();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Could not determine current user");
+    });
+
+    it("should handle errors gracefully", async () => {
+      // getCurrentUser succeeds, but changes command fails
+      mockExecuteP4Command
+        .mockResolvedValueOnce({
+          stdout: "... User jsmith\n... Email jsmith@example.com",
+          stderr: "",
+        })
+        .mockRejectedValue(new Error("Connection refused"));
+
+      const result = await getPendingChangesDetailed();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Connection refused");
     });
   });
 });

@@ -6,6 +6,7 @@
 
 import type {
   ChangelistInfo,
+  PendingChangelistDetail,
   GetSubmittedChangesOptions,
   GetPendingChangesOptions,
   P4Result,
@@ -99,6 +100,11 @@ export interface P4Provider {
    * Check if a valid ticket exists for a specific server/user
    */
   hasValidTicket(p4port: string, username: string): Promise<boolean>;
+
+  /**
+   * Fetches detailed pending changelists with file lists
+   */
+  getPendingChangesDetailed(): Promise<P4Result<PendingChangelistDetail[]>>;
 
   /**
    * Initialize the provider (e.g., establish connection)

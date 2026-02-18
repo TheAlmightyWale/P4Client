@@ -53,6 +53,7 @@ describe("Server Discovery", () => {
     hasValidTicket: jest.fn(),
     getSubmittedChanges: jest.fn(),
     getPendingChanges: jest.fn(),
+    getPendingChangesDetailed: jest.fn(),
     getCurrentUser: jest.fn(),
     runInfoCommand: jest.fn(),
   };

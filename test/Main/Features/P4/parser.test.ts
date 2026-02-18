@@ -5,6 +5,8 @@ import {
   parseP4Date,
   parseUserOutput,
   parseSetOutput,
+  parseOpenedOutput,
+  parseShelvedFiles,
 } from "../../../../src/Main/Features/P4/providers/cli/parser";
 
 describe("P4 Ztag Parser", () => {
@@ -52,6 +54,36 @@ describe("P4 Ztag Parser", () => {
       expect(result[0].desc).toBe("First change");
       expect(result[1].change).toBe("12344");
       expect(result[1].desc).toBe("Second change");
+    });
+
+    it("should parse ztag output with \\r\\n line endings", () => {
+      const output =
+        "... change 12345\r\n... time 1705334400\r\n... user jsmith\r\n... client workspace\r\n... status submitted\r\n... desc Fixed login bug";
+
+      const result = parseZtagOutput(output);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        change: "12345",
+        time: "1705334400",
+        user: "jsmith",
+        client: "workspace",
+        status: "submitted",
+        desc: "Fixed login bug",
+      });
+    });
+
+    it("should parse multiple records with \\r\\n line endings", () => {
+      const output =
+        "... change 12345\r\n... time 1705334400\r\n... user jsmith\r\n... desc First\r\n\r\n... change 12344\r\n... time 1705248000\r\n... user jdoe\r\n... desc Second";
+
+      const result = parseZtagOutput(output);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].change).toBe("12345");
+      expect(result[0].desc).toBe("First");
+      expect(result[1].change).toBe("12344");
+      expect(result[1].desc).toBe("Second");
     });
 
     it("should handle empty output", () => {
@@ -375,6 +407,128 @@ P4PORT=  ssl:perforce:1666   `;
       const result = parseP4Date("2024/01/05");
       expect(result.getMonth()).toBe(0);
       expect(result.getDate()).toBe(5);
+    });
+  });
+
+  describe("parseZtagOutput with custom delimiter", () => {
+    it("should split records on depotFile delimiter", () => {
+      const output = `... depotFile //depot/main/foo.cpp
+... rev 3
+... change 100
+... action edit
+
+... depotFile //depot/main/bar.cpp
+... rev 1
+... change default
+... action add`;
+
+      const result = parseZtagOutput(output, "depotFile");
+
+      expect(result).toHaveLength(2);
+      expect(result[0].depotFile).toBe("//depot/main/foo.cpp");
+      expect(result[0].change).toBe("100");
+      expect(result[1].depotFile).toBe("//depot/main/bar.cpp");
+      expect(result[1].change).toBe("default");
+    });
+
+    it("should handle single record with custom delimiter", () => {
+      const output = `... depotFile //depot/main/foo.cpp
+... rev 1
+... change 200`;
+
+      const result = parseZtagOutput(output, "depotFile");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].depotFile).toBe("//depot/main/foo.cpp");
+    });
+  });
+
+  describe("parseOpenedOutput", () => {
+    it("should parse multiple opened files", () => {
+      const output = `... depotFile //depot/main/foo.cpp
+... rev 3
+... change 100
+... action edit
+
+... depotFile //depot/main/bar.cpp
+... rev 1
+... change 200
+... action add`;
+
+      const result = parseOpenedOutput(output);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ depotFile: "//depot/main/foo.cpp", change: "100" });
+      expect(result[1]).toEqual({ depotFile: "//depot/main/bar.cpp", change: "200" });
+    });
+
+    it("should default change to 'default' when missing", () => {
+      const output = `... depotFile //depot/main/foo.cpp
+... rev 1
+... action edit`;
+
+      const result = parseOpenedOutput(output);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].change).toBe("default");
+    });
+
+    it("should handle files in the default changelist", () => {
+      const output = `... depotFile //depot/main/baz.cpp
+... rev 2
+... change default
+... action edit`;
+
+      const result = parseOpenedOutput(output);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].change).toBe("default");
+    });
+
+    it("should handle empty output", () => {
+      const result = parseOpenedOutput("");
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("parseShelvedFiles", () => {
+    it("should extract indexed depotFile fields", () => {
+      const record = {
+        change: "100",
+        depotFile0: "//depot/main/foo.cpp",
+        depotFile1: "//depot/main/bar.cpp",
+        depotFile2: "//depot/main/baz.cpp",
+        action0: "edit",
+        action1: "add",
+        action2: "delete",
+      };
+
+      const result = parseShelvedFiles(record);
+
+      expect(result).toEqual([
+        "//depot/main/foo.cpp",
+        "//depot/main/bar.cpp",
+        "//depot/main/baz.cpp",
+      ]);
+    });
+
+    it("should return empty array when no shelved files", () => {
+      const record = { change: "100", desc: "No shelved files here" };
+
+      const result = parseShelvedFiles(record);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should handle single shelved file", () => {
+      const record = {
+        change: "100",
+        depotFile0: "//depot/main/only.cpp",
+      };
+
+      const result = parseShelvedFiles(record);
+
+      expect(result).toEqual(["//depot/main/only.cpp"]);
     });
   });
 });

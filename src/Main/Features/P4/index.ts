@@ -8,6 +8,7 @@
 import { getProvider } from "./factory";
 import type {
   ChangelistInfo,
+  PendingChangelistDetail,
   GetSubmittedChangesOptions,
   GetPendingChangesOptions,
   P4Result,
@@ -45,4 +46,13 @@ export async function getPendingChanges(
  */
 export async function getCurrentUser(): Promise<P4Result<string>> {
   return getProvider().getCurrentUser();
+}
+
+/**
+ * Fetches detailed pending changelists with opened and shelved files
+ */
+export async function getPendingChangesDetailed(): Promise<
+  P4Result<PendingChangelistDetail[]>
+> {
+  return getProvider().getPendingChangesDetailed();
 }

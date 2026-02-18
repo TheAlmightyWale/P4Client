@@ -13,6 +13,7 @@ import type {
 } from "../../types";
 import type {
   ChangelistInfo,
+  PendingChangelistDetail,
   GetSubmittedChangesOptions,
   GetPendingChangesOptions,
   P4Result,
@@ -24,6 +25,9 @@ import {
   parseInfoOutput,
   parseSetOutput,
   parseTicketsOutput,
+  parseZtagOutput,
+  parseOpenedOutput,
+  parseShelvedFiles,
 } from "./parser";
 
 export class CliProvider implements P4Provider {
@@ -72,6 +76,92 @@ export class CliProvider implements P4Provider {
       const changes = parseChangesOutput(stdout, "pending");
 
       return { success: true, data: changes };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async getPendingChangesDetailed(): Promise<
+    P4Result<PendingChangelistDetail[]>
+  > {
+    try {
+      // 1. Get current user
+      const userResult = await this.getCurrentUser();
+      if (!userResult.success || !userResult.data) {
+        return { success: false, error: "Could not determine current user" };
+      }
+      const user = userResult.data;
+
+      // 2. Fetch pending CLs
+      const { stdout: changesOut } = await executeP4Command(
+        `changes -s pending -u ${user}`
+      );
+      const changeRecords = parseZtagOutput(changesOut);
+
+      // 3. Fetch all opened files
+      const { stdout: openedOut } = await executeP4Command(`opened -u ${user}`);
+      const openedFiles = parseOpenedOutput(openedOut);
+
+      // 4. Group opened files by CL number
+      const openedByChange = new Map<string, string[]>();
+      for (const file of openedFiles) {
+        const key = file.change;
+        if (!openedByChange.has(key)) {
+          openedByChange.set(key, []);
+        }
+        openedByChange.get(key)!.push(file.depotFile);
+      }
+
+      // 5. Fetch shelved files for numbered CLs
+      const shelvedByChange = new Map<string, string[]>();
+      const numberedCLs = changeRecords.map((r) => r.change).filter(Boolean);
+      if (numberedCLs.length > 0) {
+        try {
+          const { stdout: describeOut } = await executeP4Command(
+            `describe -S ${numberedCLs.join(" ")}`
+          );
+          const describeRecords = parseZtagOutput(describeOut);
+          for (const record of describeRecords) {
+            if (record.change) {
+              shelvedByChange.set(
+                record.change,
+                parseShelvedFiles(record)
+              );
+            }
+          }
+        } catch {
+          // Shelved file fetch is best-effort
+        }
+      }
+
+      // 6. Build result — numbered CLs first
+      const changelists: PendingChangelistDetail[] = changeRecords.map((r) => ({
+        id: parseInt(r.change, 10),
+        description: r.desc || "",
+        date: r.time
+          ? new Date(parseInt(r.time, 10) * 1000)
+          : undefined,
+        status: "pending" as const,
+        openedFiles: openedByChange.get(r.change) || [],
+        shelvedFiles: shelvedByChange.get(r.change) || [],
+      }));
+
+      // 7. Add default CL if it has files
+      const defaultFiles = openedByChange.get("default");
+      if (defaultFiles && defaultFiles.length > 0) {
+        changelists.push({
+          id: 0,
+          description: "Default Changelist",
+          status: "pending",
+          openedFiles: defaultFiles,
+          shelvedFiles: [],
+        });
+      }
+
+      return { success: true, data: changelists };
     } catch (error) {
       return {
         success: false,

@@ -20,11 +20,14 @@ export interface ZtagRecord {
  * ... status submitted
  * ... desc Fixed login bug
  */
-export function parseZtagOutput(output: string): ZtagRecord[] {
+export function parseZtagOutput(
+  output: string,
+  recordDelimiter = "change"
+): ZtagRecord[] {
   const records: ZtagRecord[] = [];
   let currentRecord: ZtagRecord | null = null;
 
-  const lines = output.split("\n");
+  const lines = output.split(/\r?\n/);
 
   for (const line of lines) {
     // Ztag lines start with "... "
@@ -40,16 +43,16 @@ export function parseZtagOutput(output: string): ZtagRecord[] {
       const fieldName = content.substring(0, spaceIndex);
       const fieldValue = content.substring(spaceIndex + 1);
 
-      // "change" field indicates start of new record for changes output
-      if (fieldName === "change") {
+      // Delimiter field indicates start of new record
+      if (fieldName === recordDelimiter) {
         if (currentRecord) {
           records.push(currentRecord);
         }
         currentRecord = {};
       }
 
-      // Handle first record if it doesn't start with "change" (e.g., user -o output)
-      if (!currentRecord && fieldName !== "change") {
+      // Handle first record if it doesn't start with delimiter (e.g., user -o output)
+      if (!currentRecord && fieldName !== recordDelimiter) {
         currentRecord = {};
       }
 
@@ -163,7 +166,7 @@ export function parseInfoOutput(output: string): ServerInfo {
  */
 export function parseSetOutput(output: string): Record<string, string> {
   const variables: Record<string, string> = {};
-  const lines = output.split("\n");
+  const lines = output.split(/\r?\n/);
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -191,6 +194,34 @@ export function parseSetOutput(output: string): Record<string, string> {
 }
 
 /**
+ * Parses p4 -ztag opened output into file/change pairs
+ * Each record has depotFile and change fields
+ */
+export function parseOpenedOutput(
+  output: string
+): { depotFile: string; change: string }[] {
+  const records = parseZtagOutput(output, "depotFile");
+  return records.map((r) => ({
+    depotFile: r.depotFile,
+    change: r.change || "default",
+  }));
+}
+
+/**
+ * Extracts indexed depotFile fields from a ztag record (e.g., depotFile0, depotFile1, ...)
+ * Used for parsing shelved files from p4 describe -S output
+ */
+export function parseShelvedFiles(record: ZtagRecord): string[] {
+  const files: string[] = [];
+  let i = 0;
+  while (record[`depotFile${i}`] !== undefined) {
+    files.push(record[`depotFile${i}`]);
+    i++;
+  }
+  return files;
+}
+
+/**
  * Parses p4 -ztag tickets output
  *
  * Example ztag output:
@@ -207,7 +238,7 @@ export function parseTicketsOutput(output: string): P4TicketInfo[] {
   const tickets: P4TicketInfo[] = [];
 
   // Split output into lines and process
-  const lines = output.split("\n");
+  const lines = output.split(/\r?\n/);
   let currentTicket: Partial<P4TicketInfo> = {};
 
   for (const line of lines) {

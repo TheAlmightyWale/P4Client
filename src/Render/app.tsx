@@ -7,12 +7,13 @@ import "./index.css";
 import { ThemeToggle } from "./Components/themeToggle";
 import { ThemeProvider } from "./Components/ThemeProvider";
 import { ChangesSection } from "./Components/P4/ChangesSection";
+import { PendingChangesSection } from "./Components/P4/PendingChangesSection";
 import { ServerManagementPage } from "./Components/Server";
 
 // Create the store hook
 const useStore = createUseStore();
 
-type AppView = "servers" | "changes";
+type AppView = "servers" | "changes" | "pending";
 
 function App() {
   const store = useStore();
@@ -59,6 +60,16 @@ function App() {
                   >
                     Changes
                   </button>
+                  <button
+                    onClick={() => setCurrentView("pending")}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      currentView === "pending"
+                        ? "bg-[var(--color-accent)] text-white"
+                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]"
+                    }`}
+                  >
+                    Pending
+                  </button>
                 </div>
               </div>
               <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
@@ -70,6 +81,7 @@ function App() {
         <div className="max-w-[var(--container-width)] mx-auto py-8 px-4">
           {currentView === "servers" && <ServerManagementPage />}
           {currentView === "changes" && <ChangesSection maxCount={25} />}
+          {currentView === "pending" && <PendingChangesSection />}
         </div>
       </div>
     </ThemeProvider>

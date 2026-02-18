@@ -40,6 +40,9 @@ const p4API: P4API = {
   getCurrentUser: () => {
     return ipcRenderer.invoke("p4:getCurrentUser");
   },
+  getPendingChangesDetailed: () => {
+    return ipcRenderer.invoke("p4:getPendingChangesDetailed");
+  },
 };
 contextBridge.exposeInMainWorld("p4API", p4API);
 

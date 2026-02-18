@@ -7,6 +7,7 @@ import {
   getSubmittedChanges,
   getPendingChanges,
   getCurrentUser,
+  getPendingChangesDetailed,
 } from "./Features/P4";
 import {
   getAllServers,
@@ -146,6 +147,10 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("p4:getCurrentUser", async () => {
     return getCurrentUser();
+  });
+
+  ipcMain.handle("p4:getPendingChangesDetailed", async () => {
+    return getPendingChangesDetailed();
   });
 
   // Server management handlers
