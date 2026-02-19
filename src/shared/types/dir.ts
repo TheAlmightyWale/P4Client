@@ -9,6 +9,7 @@ export interface DirEntry {
   name: string;
   path: string;
   children?: DirEntry[];
+  files?: string[];
 }
 
 /**
@@ -33,7 +34,7 @@ export interface DirResult<T> {
  */
 export interface DirAPI {
   getWorkspaceRoot: () => Promise<DirResult<string>>;
-  listDirectories: (options: DirListOptions) => Promise<DirResult<DirEntry[]>>;
+  listDirectories: (options: DirListOptions) => Promise<DirResult<DirEntry>>;
 }
 
 declare global {

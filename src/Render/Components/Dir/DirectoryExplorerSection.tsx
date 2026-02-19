@@ -11,7 +11,7 @@ export const DirectoryExplorerSection: React.FC = () => {
   const { sessionStatus, loading: sessionLoading } = useServers();
   const {
     workspaceRoot,
-    rootEntries,
+    rootEntry,
     expanded,
     loading,
     childrenMap,
@@ -58,7 +58,7 @@ export const DirectoryExplorerSection: React.FC = () => {
       return <ErrorMessage message={error} onRetry={refresh} />;
     }
 
-    if (rootEntries.length === 0) {
+    if (rootEntry === null) {
       return (
         <div className="flex flex-col items-center gap-2 py-8">
           <p className="text-[var(--color-text-muted)]">
@@ -70,11 +70,8 @@ export const DirectoryExplorerSection: React.FC = () => {
 
     return (
       <>
-        <p className="text-[var(--color-text-muted)] text-xs font-mono mb-3">
-          {workspaceRoot}
-        </p>
         <DirectoryTree
-          entries={rootEntries}
+          entries={[rootEntry]}
           expanded={expanded}
           loading={loading}
           childrenMap={childrenMap}

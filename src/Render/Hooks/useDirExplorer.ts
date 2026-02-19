@@ -4,7 +4,7 @@ import { DIR_FETCH_DEPTH } from "../../shared/types/dir";
 
 interface UseDirExplorerReturn {
   workspaceRoot: string | null;
-  rootEntries: DirEntry[];
+  rootEntry: DirEntry | null;
   expanded: Set<string>;
   loading: Set<string>;
   childrenMap: Map<string, DirEntry[]>;
@@ -15,6 +15,16 @@ interface UseDirExplorerReturn {
   refresh: () => Promise<void>;
 }
 
+
+function unpackRoot(
+  root: DirEntry,
+  map: Map<string, DirEntry[]>,
+): void {
+  if (root.children !== undefined) {
+      map.set(root.path, root.children);
+      unpackChildren(root.children, map);
+    }
+}
 /**
  * Recursively unpacks a tree-structured DirEntry[] response into the flat
  * childrenMap used by the renderer. For each entry that has pre-fetched
@@ -26,8 +36,7 @@ function unpackChildren(
 ): void {
   for (const entry of entries) {
     if (entry.children !== undefined) {
-      const flatChildren = entry.children.map(({ name, path }) => ({ name, path }));
-      map.set(entry.path, flatChildren);
+      map.set(entry.path, entry.children);
       unpackChildren(entry.children, map);
     }
   }
@@ -35,7 +44,7 @@ function unpackChildren(
 
 export function useDirExplorer(): UseDirExplorerReturn {
   const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
-  const [rootEntries, setRootEntries] = useState<DirEntry[]>([]);
+  const [rootEntry, setRootEntry] = useState<DirEntry | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [childrenMap, setChildrenMap] = useState<Map<string, DirEntry[]>>(new Map());
@@ -63,10 +72,10 @@ export function useDirExplorer(): UseDirExplorerReturn {
       }
 
       const newMap = new Map<string, DirEntry[]>();
-      unpackChildren(listResult.data, newMap);
+      unpackRoot(listResult.data, newMap);
       setChildrenMap(newMap);
 
-      setRootEntries(listResult.data.map(({ name, path }) => ({ name, path })));
+      setRootEntry(listResult.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -97,8 +106,7 @@ export function useDirExplorer(): UseDirExplorerReturn {
       if (result.success && result.data) {
         setChildrenMap((prev) => {
           const next = new Map(prev);
-          next.set(dirPath, result.data!.map(({ name, path }) => ({ name, path })));
-          unpackChildren(result.data!, next);
+          unpackRoot(result.data!, next);
           return next;
         });
       }
@@ -114,14 +122,14 @@ export function useDirExplorer(): UseDirExplorerReturn {
   const refresh = useCallback(async () => {
     setExpanded(new Set());
     setChildrenMap(new Map());
-    setRootEntries([]);
+    setRootEntry(null);
     setWorkspaceRoot(null);
     await initialize();
   }, [initialize]);
 
   return {
     workspaceRoot,
-    rootEntries,
+    rootEntry,
     expanded,
     loading,
     childrenMap,

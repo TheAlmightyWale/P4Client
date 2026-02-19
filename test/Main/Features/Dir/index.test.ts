@@ -16,7 +16,9 @@ const mockExecuteP4Command = executor.executeP4Command as jest.MockedFunction<
 const mockWithPromise = jest.fn<Promise<string[]>, []>();
 const mockCrawl = jest.fn().mockReturnValue({ withPromise: mockWithPromise });
 const mockOnlyDirs = jest.fn().mockReturnValue({ crawl: mockCrawl });
-const mockWithMaxDepth = jest.fn().mockReturnValue({ onlyDirs: mockOnlyDirs });
+// withMaxDepth must return both .onlyDirs (used by listDirectories) and
+// .crawl (used by addFiles which skips .onlyDirs())
+const mockWithMaxDepth = jest.fn().mockReturnValue({ onlyDirs: mockOnlyDirs, crawl: mockCrawl });
 
 jest.mock("fdir", () => ({
   fdir: jest.fn().mockImplementation(() => ({
@@ -31,7 +33,7 @@ describe("Dir Feature", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Re-wire the chain after clearAllMocks
-    mockWithMaxDepth.mockReturnValue({ onlyDirs: mockOnlyDirs });
+    mockWithMaxDepth.mockReturnValue({ onlyDirs: mockOnlyDirs, crawl: mockCrawl });
     mockOnlyDirs.mockReturnValue({ crawl: mockCrawl });
     mockCrawl.mockReturnValue({ withPromise: mockWithPromise });
   });
@@ -118,14 +120,14 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 1 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(3);
-      expect(result.data![0].name).toBe("build");
-      expect(result.data![1].name).toBe("src");
-      expect(result.data![2].name).toBe("test");
+      expect(result.data!.children).toHaveLength(3);
+      expect(result.data!.children![0].name).toBe("build");
+      expect(result.data!.children![1].name).toBe("src");
+      expect(result.data!.children![2].name).toBe("test");
       // depth 1: children should be undefined (at boundary)
-      expect(result.data![0].children).toBeUndefined();
-      expect(result.data![1].children).toBeUndefined();
-      expect(result.data![2].children).toBeUndefined();
+      expect(result.data!.children![0].children).toBeUndefined();
+      expect(result.data!.children![1].children).toBeUndefined();
+      expect(result.data!.children![2].children).toBeUndefined();
       // Verify fdir was configured with maxDepth 0 (depth-1)
       expect(mockWithMaxDepth).toHaveBeenCalledWith(0);
       expect(mockCrawl).toHaveBeenCalledWith(root);
@@ -144,10 +146,10 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 2 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(2);
+      expect(result.data!.children).toHaveLength(2);
 
       // src has children (Main, Render)
-      const src = result.data!.find((e) => e.name === "src");
+      const src = result.data!.children!.find((e) => e.name === "src");
       expect(src).toBeDefined();
       expect(src!.children).toHaveLength(2);
       expect(src!.children![0].name).toBe("Main");
@@ -158,7 +160,7 @@ describe("Dir Feature", () => {
 
       // test has no children discovered at depth 1 — but fdir found it
       // as a leaf, so it wasn't visited for children → undefined
-      const test = result.data!.find((e) => e.name === "test");
+      const test = result.data!.children!.find((e) => e.name === "test");
       expect(test).toBeDefined();
       expect(test!.children).toBeUndefined();
 
@@ -183,7 +185,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 3 });
 
       expect(result.success).toBe(true);
-      const src = result.data!.find((e) => e.name === "src");
+      const src = result.data!.children!.find((e) => e.name === "src");
       expect(src!.children).toHaveLength(1);
       expect(src!.children![0].name).toBe("Main");
       // Main is at depth 2 out of 3, and fdir found no children for it
@@ -217,7 +219,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 3 });
 
       expect(result.success).toBe(true);
-      const src = result.data!.find((e) => e.name === "src");
+      const src = result.data!.children!.find((e) => e.name === "src");
       expect(src!.children).toHaveLength(2);
 
       // Empty has no children found by fdir — but since fdir visited it
@@ -244,7 +246,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 2 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual([]);
+      expect(result.data!.children).toEqual([]);
     });
 
     it("should return empty array when fdir returns nothing", async () => {
@@ -253,7 +255,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 1 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual([]);
+      expect(result.data!.children).toEqual([]);
     });
 
     it("should use DIR_FETCH_DEPTH as default when depth not specified", async () => {
@@ -294,10 +296,10 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 1 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(1);
-      expect(result.data![0].name).toBe("src");
-      // Root should not appear as an entry
-      expect(result.data!.find((e) => e.path === root)).toBeUndefined();
+      expect(result.data!.children).toHaveLength(1);
+      expect(result.data!.children![0].name).toBe("src");
+      // Root should not appear as a child entry
+      expect(result.data!.children!.find((e) => e.path === root)).toBeUndefined();
     });
 
     it("should sort entries alphabetically", async () => {
@@ -311,7 +313,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 1 });
 
       expect(result.success).toBe(true);
-      expect(result.data!.map((e) => e.name)).toEqual([
+      expect(result.data!.children!.map((e) => e.name)).toEqual([
         "alpha",
         "middle",
         "zebra",
@@ -329,7 +331,7 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 2 });
 
       expect(result.success).toBe(true);
-      const src = result.data![0];
+      const src = result.data!.children![0];
       expect(src.children!.map((e) => e.name)).toEqual(["Alpha", "Zebra"]);
     });
 
@@ -344,9 +346,9 @@ describe("Dir Feature", () => {
       const result = await listDirectories({ path: root, depth: 3 });
 
       expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(1);
+      expect(result.data!.children).toHaveLength(1);
 
-      const a = result.data![0];
+      const a = result.data!.children![0];
       expect(a.name).toBe("a");
       expect(a.children).toHaveLength(1);
 
@@ -371,8 +373,8 @@ describe("Dir Feature", () => {
 
       const result = await listDirectories({ path: root, depth: 2 });
 
-      expect(result.data![0].path).toBe(r("/workspace/src"));
-      expect(result.data![0].children![0].path).toBe(r("/workspace/src/Main"));
+      expect(result.data!.children![0].path).toBe(r("/workspace/src"));
+      expect(result.data!.children![0].children![0].path).toBe(r("/workspace/src/Main"));
     });
   });
 });

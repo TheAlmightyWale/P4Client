@@ -40,22 +40,41 @@ export const DirectoryNode: React.FC<DirectoryNodeProps> = ({
             "\u25B8"
           )}
         </span>
-        <span className="text-[var(--color-text-primary)] text-sm truncate">
+        <span className="text-[var(--color-text-secondary)] text-sm truncate">
           {entry.name}
         </span>
       </div>
 
-      {isExpanded && children && children.map((child) => (
-        <DirectoryNode
-          key={child.path}
-          entry={child}
-          depth={depth + 1}
-          expanded={expanded}
-          loading={loading}
-          childrenMap={childrenMap}
-          onToggle={onToggle}
-        />
-      ))}
+      {isExpanded && (
+        <>
+          {children && children.map((child) => (
+            <DirectoryNode
+              key={child.path}
+              entry={child}
+              depth={depth + 1}
+              expanded={expanded}
+              loading={loading}
+              childrenMap={childrenMap}
+              onToggle={onToggle}
+            />
+          ))}
+          {entry.files && entry.files.map((filePath) => {
+            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+            return (
+              <div
+                key={filePath}
+                className="flex items-center py-0.5 px-2"
+                style={{ paddingLeft: `${(depth + 1) * 20 + 8}px` }}
+              >
+                <span className="w-4 mr-1 flex-shrink-0" />
+                <span className="text-[var(--color-text-primary)] text-sm truncate">
+                  {fileName}
+                </span>
+              </div>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 };

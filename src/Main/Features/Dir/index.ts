@@ -75,23 +75,59 @@ function buildTree(rootPath: string, flatPaths: string[]): DirEntry[] {
   return buildEntries(rootPath);
 }
 
+async function addFiles(directory: DirEntry)
+{
+  const fileApi = new fdir()
+    .withMaxDepth(0)
+    .crawl(directory.path);
+
+  const files = await fileApi.withPromise();
+  files.forEach((f) => {
+    if(!directory.files){
+      directory.files = [];
+    }
+
+    directory.files?.push(f);
+  });
+
+  //for child directories
+  if(directory.children){
+    const filePromises = directory.children.map(addFiles);
+    await Promise.all(filePromises);
+  }
+}
+
 /**
  * Lists child directories of the given path using fdir, up to `depth` levels deep.
  * Returns a tree-structured response: each DirEntry may contain pre-fetched `children`.
  */
-export async function listDirectories(options: DirListOptions): Promise<DirResult<DirEntry[]>> {
+export async function listDirectories(options: DirListOptions): Promise<DirResult<DirEntry>> {
   const depth = options.depth ?? DIR_FETCH_DEPTH;
 
   try {
-    const api = new fdir()
+    const directoryApi = new fdir()
       .withMaxDepth(depth - 1)
       .onlyDirs()
       .crawl(options.path);
 
-    const dirPaths = await api.withPromise();
-    const entries = buildTree(options.path, dirPaths);
+    //special case for root entry
+    const root: DirEntry = {
+      name: path.basename(options.path),
+      path: options.path,
+    };
 
-    return { success: true, data: entries };
+    await addFiles(root);
+
+    const flatPaths = await directoryApi.withPromise();
+    const entries = buildTree(options.path, flatPaths);
+
+    //Fill all entries with files
+    const filePromises = entries.map(addFiles);
+    await Promise.all(filePromises);
+
+    root.children = entries;
+
+    return { success: true, data: root };
   } catch (error) {
     return {
       success: false,
