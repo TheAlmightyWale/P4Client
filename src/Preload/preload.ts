@@ -12,6 +12,7 @@ import type {
   UpdateServerInput,
   LoginInput,
 } from "../shared/types/server";
+import type { DirAPI } from "../shared/types/dir";
 
 console.log("[Preload] Script initializing");
 
@@ -66,5 +67,12 @@ const serverAPI: ServerAPI = {
   validateSession: () => ipcRenderer.invoke("server:validateSession"),
 };
 contextBridge.exposeInMainWorld("serverAPI", serverAPI);
+
+// Expose Directory API
+const dirAPI: DirAPI = {
+  getWorkspaceRoot: () => ipcRenderer.invoke("dir:getWorkspaceRoot"),
+  listDirectories: (options) => ipcRenderer.invoke("dir:listDirectories", options),
+};
+contextBridge.exposeInMainWorld("dirAPI", dirAPI);
 
 console.log("[Preload] Script initialized successfully");

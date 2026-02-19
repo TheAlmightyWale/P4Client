@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getPendingChangesDetailed,
 } from "./Features/P4";
+import { getWorkspaceRoot, listDirectories } from "./Features/Dir";
 import {
   getAllServers,
   getServerById,
@@ -209,6 +210,15 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("server:validateSession", async () => {
     return validateSession();
+  });
+
+  // Directory explorer handlers
+  ipcMain.handle("dir:getWorkspaceRoot", async () => {
+    return getWorkspaceRoot();
+  });
+
+  ipcMain.handle("dir:listDirectories", async (_event, options) => {
+    return listDirectories(options);
   });
 
   // Create window immediately — user sees skeleton UI right away
