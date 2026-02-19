@@ -58,6 +58,36 @@ Follow these steps in order. For full patterns and code examples, read [referenc
 7. **Navigation** — `src/Render/app.tsx`: Add to `AppView` type, nav button, conditional render
 8. **Tests** — `test/Main/Features/<Feature>/index.test.ts`: See [Test Implementation](#test-implementation) below
 9. **Verify** — Run `npm run lint` and `npx tsc --noEmit`, then `npm test` before committing
+10. **Document** — Update or create feature documentation. See [Document Changes](#document-changes) below
+
+## Document Changes
+
+After implementation is verified, document what was built so future developers and agents can understand, extend, or modify the feature without reading every source file.
+
+**Location**: `.agents/Features/<feature-name>-docs.md`
+
+If a docs file already exists for the feature, update it. Otherwise create a new one. Keep it concise — focus on the big picture that can be followed up with code.
+
+**Required sections**:
+
+1. **Overview** (2-3 sentences) — What the feature does and why it exists
+2. **Architecture** — How the feature fits into the Electron process model. List each layer touched:
+   - Shared types file and key interfaces
+   - Main process module: exported functions and what they do (1 line each)
+   - IPC channels registered (channel name → function mapping)
+   - Preload API name and methods
+   - React hook name and what state it manages
+   - Components: container + child components with their responsibilities
+   - Navigation: view name added to `AppView`
+3. **Data flow** — A brief description of the request/response path from user action to data display (e.g., "User clicks Refresh → hook calls `window.dirAPI.listDirectories()` → IPC → main process runs fdir → returns `DirResult<DirEntry[]>` → hook unpacks tree into childrenMap → components re-render")
+4. **Key design decisions** — Anything non-obvious: caching strategy, lazy loading approach, error handling choices, performance trade-offs. These are the things a future developer would need to know before making changes
+5. **Extension points** — Where to look to add capabilities. E.g., "To add file listing alongside directories, modify `listDirectories()` in `src/Main/Features/Dir/index.ts` and add a `files` field to `DirEntry` in `src/shared/types/dir.ts`"
+
+**Rules**:
+- Do not duplicate code — reference file paths and function names instead
+- Keep each section to a few lines or a short list. The goal is orientation, not exhaustive documentation
+- Write for someone who has read `CLAUDE.md` and knows the app's architecture but has never seen this feature
+- If the feature modifies an existing feature's behavior, note what changed and why in the existing feature's docs file
 
 ## Test Implementation
 

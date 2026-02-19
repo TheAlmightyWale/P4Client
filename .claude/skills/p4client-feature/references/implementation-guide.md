@@ -12,6 +12,7 @@ Step-by-step implementation instructions for adding a feature to P4Client. Each 
 6. [Renderer Components](#6-renderer-components)
 7. [Navigation Tab](#7-navigation-tab)
 8. [Tests](#8-tests)
+9. [Document Changes](#9-document-changes)
 
 ---
 
@@ -193,3 +194,67 @@ Three changes:
 Run tests: `npx jest test/Main/Features/<Feature>/index.test.ts`
 Run all tests: `npm test`
 Run lint: `npm run lint`
+
+## 9. Document Changes
+
+**File**: `.agents/Features/<feature-name>-docs.md` (create new or update existing)
+
+After verifying the implementation, write concise documentation for future developers and agents. This is the last step before committing.
+
+### What to document
+
+| Section | Content | Length |
+| --- | --- | --- |
+| **Overview** | What the feature does and why | 2-3 sentences |
+| **Architecture** | Each layer touched: types, main module, IPC channels, preload API, hook, components, navigation | Short list |
+| **Data flow** | Request/response path from user action to rendered data | 1 paragraph |
+| **Key design decisions** | Non-obvious choices: caching, lazy loading, error handling, performance trade-offs | Bulleted list |
+| **Extension points** | Where to add capabilities, with file paths and function names | Bulleted list |
+
+### Example
+
+```markdown
+# Directory Explorer
+
+## Overview
+
+Displays the directory tree of the P4 workspace in an expandable/collapsible view.
+Directories are loaded lazily — each expand fetches N levels deep (configurable via `DIR_FETCH_DEPTH`).
+
+## Architecture
+
+- **Types**: `src/shared/types/dir.ts` — `DirEntry`, `DirListOptions`, `DirResult<T>`, `DirAPI`
+- **Main module**: `src/Main/Features/Dir/index.ts`
+  - `getWorkspaceRoot()` — runs `p4 info`, extracts `clientRoot`
+  - `listDirectories(options)` — uses `fdir` to crawl, returns tree-structured `DirEntry[]`
+- **IPC channels**: `dir:getWorkspaceRoot` → `getWorkspaceRoot()`, `dir:listDirectories` → `listDirectories()`
+- **Preload**: `window.dirAPI` with `getWorkspaceRoot`, `listDirectories`
+- **Hook**: `useDirExplorer` — manages tree state, expanded/collapsed sets, childrenMap, lazy fetching
+- **Components**: `DirectoryExplorerSection` (container), `DirectoryTree`, `DirectoryNode` (recursive)
+- **Navigation**: `"explorer"` view in `AppView`
+
+## Data flow
+
+User navigates to Explorer tab → `useDirExplorer.initialize()` calls `dirAPI.getWorkspaceRoot()`
+then `dirAPI.listDirectories({ path: root, depth: 2 })` → main process runs fdir, builds tree →
+returns `DirResult<DirEntry[]>` → hook unpacks nested children into flat `childrenMap` → components render tree.
+Expanding a node at the depth boundary triggers another `listDirectories()` call for that subtree.
+
+## Key design decisions
+
+- Multi-level fetch (default depth 2) reduces IPC round-trips vs single-level loading
+- Tree response is unpacked into a flat `Map<path, children[]>` for O(1) lookups during render
+- `children: undefined` = not yet fetched; `children: []` = confirmed empty (no subdirectories)
+
+## Extension points
+
+- Add file listing: extend `DirEntry` in `src/shared/types/dir.ts`, modify `listDirectories()` in Dir module
+- Change fetch depth: update `DIR_FETCH_DEPTH` constant in `src/shared/types/dir.ts`
+- Add filtering (e.g., hide node_modules): add filter param to `DirListOptions`, apply in `listDirectories()`
+```
+
+### Rules
+
+- Reference file paths and function names — do not duplicate code
+- Write for someone who knows the app architecture (has read `CLAUDE.md`) but has never seen this feature
+- If the feature modifies existing behavior, update that feature's docs file too and note what changed
