@@ -46,9 +46,12 @@ export function useP4Changes(
   }, [maxCount, depotPath]);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchChanges();
-    }
+    if (!autoFetch) return;
+
+    fetchChanges();
+
+    const interval = setInterval(fetchChanges, 60_000);
+    return () => clearInterval(interval);
   }, [autoFetch, fetchChanges]);
 
   return {
